@@ -73,8 +73,6 @@ void cluster_dispose(Cluster_t *cluster)
         free(cluster);
         free(cluster->groups_disappeared);
         free(cluster->groups_exists);
-        
-        cluster = NULL;
     }
 }
 

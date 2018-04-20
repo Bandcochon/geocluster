@@ -30,57 +30,107 @@
  */
 
 #include "server.h"
-#include "route.h"
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <unistd.h>
 #include <errno.h>
-#include <sys/socket.h>
+#include <event2/event.h>
+#include <event2/http.h>
+#include <event2/util.h>
 
-Server_t * server_create(char * address, uint16_t port)
+Server_t *server_create(char *address, uint16_t port)
 {
-    Server_t * server = NULL;
+    Server_t *server = NULL;
 
     server = (Server_t *) malloc(sizeof(Server_t));
-    if (!server)
-    {
+    if (!server) {
         perror("Unable to allocate server object");
         exit(EXIT_FAILURE);
     }
 
+    server->address = address;
+    server->port = port;
+    server->base = event_base_new();
+    server->http = evhttp_new(server->base);
+
     return server;
 }
 
-void server_dispose(Server_t * server)
+void server_dispose(Server_t *server)
 {
-    if (server)
-    {
-        if (server->address)
-        {
+    if (server) {
+        event_base_free(server->base);
+        evhttp_free(server->http);
+
+        if (server->address) {
             free(server->address);
 
-            if (server->socket)
-            {
+            if (server->socket) {
                 close(server->socket);
             }
         }
-        
+
         free(server);
-        server = NULL;
     }
 }
 
-void server_add_route(Server_t * server, const char * path, ServerCallback callback, void * data)
+void server_add_route(Server_t *server, const char *path, ServerCallback callback, void *data)
 {
-    Route_t * route = NULL;
-
-    route = route_create_with_values(path, callback, data);
-    route_add_route(server->routes, route);
+    evhttp_set_cb(server->http, path, callback, data);
 }
 
-void server_run(Server_t * server)
+void server_run(Server_t *server)
 {
+    struct evhttp_bound_socket *handle;
+    char uri_root[512];
+    struct sockaddr_storage addr_storage;
+    evutil_socket_t fd;
+    int got_port;
+    ev_socklen_t socklen = sizeof(addr_storage);
+    char addrbuf[128];
+    void *inaddr;
+    const char *addr;
 
+
+    fprintf(stdout, "Try to acquire the socket at %s:%d\n", server->address, server->port);
+
+    handle = evhttp_bind_socket_with_handle(server->http, server->address, server->port);
+    if (!handle) {
+        printf("Unable to listen the port %d", server->port);
+        exit(EXIT_FAILURE);
+    }
+
+    /* Extract and display the address we're listening on. */
+
+    fd = evhttp_bound_socket_get_fd(handle);
+    memset(&addr_storage, 0, sizeof(addr_storage));
+
+    if (getsockname(fd, (struct sockaddr *) &addr_storage, &socklen)) {
+        perror("getsockname() failed");
+        exit(EXIT_FAILURE);
+    }
+
+    if (addr_storage.ss_family == AF_INET) {
+        got_port = ntohs(((struct sockaddr_in *) &addr_storage)->sin_port);
+        inaddr = &((struct sockaddr_in *) &addr_storage)->sin_addr;
+    }
+
+    else if (addr_storage.ss_family == AF_INET6) {
+        got_port = ntohs(((struct sockaddr_in6 *) &addr_storage)->sin6_port);
+        inaddr = &((struct sockaddr_in6 *) &addr_storage)->sin6_addr;
+    }
+
+    else {
+        fprintf(stderr, "Weird address family %d\n", addr_storage.ss_family);
+        exit(EXIT_FAILURE);
+    }
+
+    addr = evutil_inet_ntop(addr_storage.ss_family, inaddr, addrbuf, sizeof(addrbuf));
+
+    fprintf(stdout, "Listening on %s:%d\n", addr, got_port);
+    evutil_snprintf(uri_root, sizeof(uri_root), "http://%s:%d", addr, got_port);
+
+    event_base_dispatch(server->base);
 }
-

@@ -30,6 +30,7 @@
  */
 
 #include "arguments.h"
+#include "file.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -37,7 +38,7 @@
 #include <unistd.h>
 #include <errno.h>
 
-const char *DefaultConfigFile = "";
+const char *DefaultConfigFile = "./config.ini";
 const int DIR_SIZE = 1024;
 
 Argument_t *argument_create(void)
@@ -69,7 +70,6 @@ void argument_dispose(Argument_t *args)
             free(args->config_file);
         }
         free(args);
-        args = NULL;
     }
 }
 
@@ -119,18 +119,15 @@ Argument_t *argument_check(int argc, char **argv)
         exit(1);
     }
 
-    if (!args->help && !args->filename)
-    {
-        fprintf(stderr, "Error: No arguments given\n");
-        args->help = 1;
-    }
-
     if (!args->config_file)
     {
-        
-        char  *config_file = NULL, *cwd = NULL;
-        int len = strlen(DefaultConfigFile);
-        char *current_dir = (char *)malloc(sizeof(char *) * DIR_SIZE);
+
+        char  *config_file = NULL;
+        char *current_dir = NULL;
+
+        fprintf(stderr, "Missing configuration file. Try get it from current directory.\n");
+
+        current_dir = (char *)malloc(sizeof(char *) * DIR_SIZE);
 
         if (!getcwd(current_dir, DIR_SIZE))
         {
@@ -139,6 +136,7 @@ Argument_t *argument_check(int argc, char **argv)
         }
 
         config_file = strcat(current_dir, DefaultConfigFile);
+        file_ensure_exists(config_file);
         args->config_file = strdup(config_file);
         
         free(current_dir);

@@ -34,23 +34,50 @@
 
 #include "point.h"
 #include <stdint.h>
+#include <mysql/mysql.h>
 
-typedef struct
-{
-    int width, height;
+typedef struct {
     double north;
     double south;
     double east;
     double west;
+} Bound_t;
+
+typedef struct {
     uint16_t port;
+    char * address;
+} ServerConfig_t;
 
+typedef struct {
+    ServerConfig_t server;
+    char * username;
+    char * password;
+    char * database;
+    MYSQL * db;
+} DatabaseConfig_t;
+
+typedef struct
+{
+    int width, height;
     LatLng_t excluded;
+    Bound_t bounds;
+    ServerConfig_t server;
+    DatabaseConfig_t database;
+} Configuration_t;
 
-    char *address;
+/*
+ * Read the configuration from disk
+ *
+ * @param config_path: The file to read
+ * @return The configuration object
+ */
+Configuration_t *configuration_read(const char *config_path);
 
-} Config_t;
-
-Config_t *config_read(char *config_path);
-void config_dispose(Config_t *config);
+/*
+ * Dispose all configuration from memory
+ *
+ * @param config: The configuration object
+ */
+void configuration_dispose(Configuration_t *config);
 
 #endif

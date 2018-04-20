@@ -31,16 +31,19 @@
 
 #include "arguments.h"
 #include "file.h"
-#include "points_array.h"
 #include "cluster.h"
 #include "json_convertion.h"
 #include "config.h"
 #include "server.h"
+#include "database.h"
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
 #include <string.h>
+#include <event2/buffer.h>
+#include <event2/keyvalq_struct.h>
+#include <evhttp.h>
+
 
 /*
  * Display the program usage
@@ -54,31 +57,32 @@ static void usage_if_needed(Argument_t *args)
         fprintf(stderr, "   -h|--help          : Display this message\n");
         fprintf(stderr, "   -f|--file FILENAME : The file to inspect\n");
         fprintf(stderr, "\n");
-        
+
         exit(EXIT_SUCCESS);
     }
 }
 
-static void process_clustering(char *content, Config_t * config)
+static char *process_clustering(PointArray_t *points_array, Configuration_t *config)
 {
-    PointArray_t *points_array = NULL;
     Cluster_t *cluster = NULL;
     char *result = NULL;
 
-    points_array= convert_from_string(content);
     cluster = cluster_create(config->width, config->height, points_array);
 
-    cluster_set_bounds(cluster, config->north, config->south, config->east, config->west);
+    cluster_set_bounds(cluster, config->bounds.north, config->bounds.south, config->bounds.east, config->bounds.west);
     cluster_compute(cluster, config->excluded.lat, config->excluded.lng);
 
     result = convert_from_cluster(cluster);
 
     cluster_dispose(cluster);
+
+    return result;
 }
 
-static void get_and_process_file_content(const char * filename, Config_t * config)
+static void get_and_process_file_content(const char *filename, Configuration_t *config)
 {
-    char * content = NULL;
+    char *content = NULL;
+    PointArray_t *points_array = NULL;
 
     content = file_load(filename);
     if (!content)
@@ -87,7 +91,8 @@ static void get_and_process_file_content(const char * filename, Config_t * confi
         return;
     }
 
-    process_clustering(content, config);
+    points_array = convert_from_string(content);
+    process_clustering(points_array, config);
     free(content);
 }
 
@@ -95,44 +100,110 @@ static void get_and_process_file_content(const char * filename, Config_t * confi
  * Process the server request and send a response.
  * 
  * @param request: The server request
- * @param response: The server response
+ * @param data: The data associated with the route
  */
-static void on_process_response(ServerRequest_t * request, ServerResponse_t * response, void * data)
+static void on_process_response(struct evhttp_request *req, void *data)
 {
-    if (strcmp(request->method, "POST"))
-    {
-        response->status = 405;
-        response->message = "Not implemented";
-        return;
-    }
+    struct evkeyvalq params;
+    struct evbuffer *buf = NULL;
+    PointArray_t *array = NULL;
+    char *json_result = NULL;
+    int result = 0;
 
-    process_clustering(request->body, (Config_t *)data);
+    fprintf(stdout, "Got something from %s\n", req->remote_host);
+
+    result = evhttp_parse_query_str(evhttp_uri_get_query(evhttp_request_get_evhttp_uri(req)), &params);
+    if (result == -1)
+    {
+        evhttp_send_reply(req, 400, "Bad Request", NULL);
+    }
+    else
+    {
+        Configuration_t *config = (Configuration_t *) data;
+        int got_north = 0, got_west = 0, got_east = 0, got_south = 0;
+
+        for (struct evkeyval *i = params.tqh_first; i; i = i->next.tqe_next)
+        {
+            if (!strcmp("north", i->key))
+            {
+                config->bounds.north = atof(i->value);
+                got_north = 1;
+            }
+            else if (!strcmp("south", i->key))
+            {
+                config->bounds.south = atof(i->value);
+                got_south = 1;
+            }
+            else if (!strcmp("east", i->key))
+            {
+                config->bounds.east = atof(i->value);
+                got_east = 1;
+            }
+            else if (!strcmp("west", i->key))
+            {
+                config->bounds.west = atof(i->value);
+                got_west = 1;
+            }
+            else
+            {
+                fprintf(stderr, "Unknown key %s, with this value %s\n", i->key, i->value);
+                evhttp_send_reply(req, 400, "Bad Request", NULL);
+                return;
+            }
+        }
+
+
+        if (!(got_east && got_north && got_south && got_west))
+        {
+            fprintf(stderr, "Error : Missing parameters\n");
+            evhttp_send_reply(req, 400, "Bad Request: Missing parameters", NULL);
+            return;
+        }
+        array = database_execute(config);
+
+        json_result = process_clustering(array, config);
+
+        buf = evbuffer_new();
+        evbuffer_add_printf(buf, "%s", json_result);
+        free(json_result);
+        evhttp_add_header(evhttp_request_get_output_headers(req), "Content-Type", "application/json");
+        evhttp_send_reply(req, 200, "OK", buf);
+    }
 }
 
 int main(int argc, char **argv)
 {
     Argument_t *args = NULL;
-    Config_t * config = NULL;
-    Server_t * server = NULL;
-    
+    Configuration_t *config = NULL;
+    Server_t *server = NULL;
+
     args = argument_check(argc, argv);
     usage_if_needed(args);
 
-    config = config_read(args->config_file);
+    config = configuration_read(args->config_file);
+
+    config->database.db = database_connect();
 
     if (args->filename)
     {
         // For testing purpose
+        fprintf(stdout, "Start as normal executable\n");
         get_and_process_file_content(args->filename, config);
     }
-    else 
+    else
     {
-        server = server_create(config->address, config->port);
-        server_add_route(server, "/", on_process_response, config);
+        fprintf(stdout, "Start as micro service\n");
+
+        server = server_create(config->server.address, config->server.port);
+        server_add_route(server, "/", (ServerCallback) on_process_response, config);
+
         server_run(server);
+        server_dispose(server);
     }
-    config_dispose(config); 
+
+    configuration_dispose(config);
     argument_dispose(args);
+    mysql_close(config->database.db);
 
     return 0;
 }

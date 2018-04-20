@@ -31,238 +31,148 @@
 
 #include "config.h"
 #include "file.h"
+#include "ini.h"
 
 #include <stdlib.h>
 #include <string.h>
-#include <yaml.h>
 
-typedef struct wait_t
+
+static Configuration_t *configuration_create(void)
 {
-    char key : 1;
-    char value : 1;
-    char width : 1;
-    char height : 1;
-    char north : 1;
-    char south : 1;
-    char east : 1;
-    char west : 1;
-    char port : 1;
-    char address : 1;
-    char excluded : 1;
-    char excluded_lat : 1;
-    char excluded_lng : 1;
-    char excluded_done: 2;
-} wait_t;
+    Configuration_t *config = NULL;
 
-static void config_get_yaml_key(Config_t *config, wait_t *wait, const char *value);
-static void config_get_yaml_value(Config_t *config, wait_t *wait, const char *value);
-
-static Config_t *config_create(void)
-{
-    Config_t *config = NULL;
-
-    config = (Config_t *)malloc(sizeof(Config_t));
+    config = (Configuration_t *) malloc(sizeof(Configuration_t));
     if (!config)
     {
         perror("An error occured while allocation configuration");
         exit(1);
     }
 
-    config->address = NULL;
-    config->port = 0;
-    config->width = 0;
     config->height = 0;
-    config->north = 0.0;
-    config->south = 0.0;
-    config->east = 0.0;
-    config->west = 0.0;
+    config->width = 0;
+
+    config->server.address = NULL;
+    config->server.port = 0;
+
+    config->bounds.north = 0.0;
+    config->bounds.south = 0.0;
+    config->bounds.east = 0.0;
+    config->bounds.west = 0.0;
+
     config->excluded.lat = 0.0;
     config->excluded.lng = 0.0;
 
+    config->database.database = NULL;
+    config->database.username = NULL;
+    config->database.password = NULL;
+    config->database.server.address = NULL;
+    config->database.server.port = 0;
+
     return config;
 }
 
-Config_t *config_read(char *config_path)
+static void handle_section_server(Configuration_t *conf, const char *section, const char *name, const char *value)
 {
-    FILE *input_file = NULL;
-    Config_t *config = NULL;
-    wait_t wait;
-    yaml_parser_t parser;
-    yaml_token_t token;
-    int done = 0;
+    if (strcmp(section, "server") != 0)
+    {
+        return;
+    }
+
+    if (!strcmp(name, "address"))
+    {
+        conf->server.address = strdup(value);
+    }
+    else if (!strcmp(name, "port"))
+    {
+        conf->server.port = (uint16_t) atoi(value);
+    }
+}
+
+static void handle_section_database(Configuration_t *conf, const char *section, const char *name, const char *value)
+{
+    if (strcmp(section, "database") != 0)
+    {
+        return;
+    }
+
+    if (!strcmp(name, "host"))
+    {
+        conf->database.server.address = strdup(value);
+    }
+    else if (!strcmp(name, "port"))
+    {
+        conf->database.server.port = (uint16_t) atoi(value);
+    }
+    else if (!strcmp(name, "user"))
+    {
+        conf->database.username = strdup(value);
+    }
+    else if (!strcmp(name, "password"))
+    {
+        conf->database.password = strdup(value);
+    }
+    else if (!strcmp(name, "database"))
+    {
+        conf->database.database = strdup(value);
+    }
+
+}
+
+static void handle_section_excluded(Configuration_t *conf, const char *section, const char *name, const char *value)
+{
+    if (strcmp(section, "excluded") != 0)
+    {
+        return;
+    }
+    if (!strcmp(name, "lat"))
+    {
+        conf->excluded.lat = atof(value);
+    }
+    else if (!strcmp(name, "lng"))
+    {
+        conf->excluded.lng = atof(value);
+    }
+
+}
+
+static int handler(void *config, const char *section, const char *name, const char *value)
+{
+    Configuration_t *conf = (Configuration_t *) config;
+
+    handle_section_database(conf, section, name, value);
+    handle_section_server(conf, section, name, value);
+    handle_section_excluded(conf, section, name, value);
+}
+
+Configuration_t *configuration_read(const char *config_path)
+{
+    Configuration_t *configuration;
+
+    if (!config_path)
+    {
+        fprintf(stderr, "I don't have any configuration file.\n");
+        exit(EXIT_FAILURE);
+    }
 
     file_ensure_exists(config_path);
+    configuration = configuration_create();
+    ini_parse(config_path, handler, configuration);
 
-    config = config_create();
-    memset(&parser, 0, sizeof(yaml_parser_t));
-    memset(&token, 0, sizeof(yaml_token_t));
-    memset(&wait, 0, sizeof(wait_t));
-
-    yaml_parser_initialize(&parser);
-
-    input_file = fopen(config_path, "r");
-
-    yaml_parser_set_input_file(&parser, input_file);
-
-    do
-    {
-        yaml_parser_scan(&parser, &token);
-
-        switch (token.type)
-        {
-        case YAML_KEY_TOKEN:
-            wait.key = 1;
-            break;
-
-        case YAML_VALUE_TOKEN:
-            wait.value = 1;
-            break;
-
-        case YAML_SCALAR_TOKEN:
-            if (wait.key)
-            {
-                config_get_yaml_key(config, &wait, token.data.scalar.value);
-            }
-            else if (wait.value)
-            {
-                config_get_yaml_value(config, &wait, token.data.scalar.value);
-            }
-            break;
-        }
-    } while (token.type != YAML_STREAM_END_TOKEN);
-
-    yaml_token_delete(&token);
-    yaml_parser_delete(&parser);
-
-    fclose(input_file);
-
-    return config;
+    return configuration;
 }
 
-void config_dispose(Config_t *config)
+#define DELETE(arg) if (arg) free(arg)
+
+void configuration_dispose(Configuration_t *config)
 {
     if (config)
     {
-        if (config->address)
-        {
-            free(config->address);
-        }
+        DELETE(config->server.address);
+        DELETE(config->database.server.address);
+        DELETE(config->database.database);
+        DELETE(config->database.username);
+        DELETE(config->database.password);
+
         free(config);
-    }
-}
-
-static void config_get_yaml_key(Config_t *config, wait_t *wait, const char *value)
-{
-    wait->key = 0;
-
-    if (!strcmp(value, "width"))
-    {
-        wait->width = 1;
-    }
-    else if (!strcmp(value, "height"))
-    {
-        wait->height = 1;
-    }
-    else if (!strcmp(value, "north"))
-    {
-        wait->north = 1;
-    }
-    else if (!strcmp(value, "south"))
-    {
-        wait->south = 1;
-    }
-    else if (!strcmp(value, "east"))
-    {
-        wait->east = 1;
-    }
-    else if (!strcmp(value, "west"))
-    {
-        wait->west = 1;
-    }
-    else if (!strcmp(value, "address"))
-    {
-        wait->address = 1;
-    }
-    else if (!strcmp(value, "port"))
-    {
-        wait->port = 1;
-    }
-    else if (!strcmp(value, "excluded"))
-    {
-        wait->excluded = 1;
-    }
-    else if (!strcmp(value, "lat") && wait->excluded)
-    {
-        wait->excluded_lat = 1;
-    }
-    else if (!strcmp(value, "lng") && wait->excluded)
-    {
-        wait->excluded_lng = 1;
-    }
-}
-
-static void config_get_yaml_value(Config_t *config, wait_t *wait, const char *value)
-{
-    wait->value = 0;
-
-    if (wait->width)
-    {
-        wait->width = 0;
-        config->width = atoi(value);
-    }
-    else if (wait->height)
-    {
-        wait->height = 0;
-        config->height = atoi(value);
-    }
-    else if (wait->north)
-    {
-        wait->north = 0;
-        config->north = atof(value);
-    }
-    else if (wait->south)
-    {
-        wait->south = 0;
-        config->south = atof(value);
-    }
-    else if (wait->east)
-    {
-        wait->east = 0;
-        config->east = atof(value);
-    }
-    else if (wait->west)
-    {
-        wait->west = 0;
-        config->west = atof(value);
-    }
-    else if (wait->address)
-    {
-        wait->address = 0;
-        config->address = strdup(value);
-    }
-    else if (wait->port)
-    {
-        wait->port = 0;
-        config->port = atoi(value);
-    }
-    else if (wait->excluded)
-    {
-        if (wait->excluded_lng)
-        {
-            wait->excluded_done++;
-            wait->excluded_lng = 0;
-            config->excluded.lng = atof(value);
-        }
-        else if (wait->excluded_lat)
-        {
-            wait->excluded_done++;
-            wait->excluded_lat = 0;
-            config->excluded.lat = atof(value);
-        }
-
-        if (wait->excluded_done == 2) {
-            wait->excluded = 0;
-            wait->excluded_done = 0;
-        }
     }
 }

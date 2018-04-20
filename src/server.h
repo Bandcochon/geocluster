@@ -32,9 +32,21 @@
 #ifndef __SERVER_H__
 #define __SERVER_H__
 
-#include "server_types.h"
-
+#include <event2/http.h>
 #include <stdint.h>
+
+typedef void (*ServerCallback)(struct evhttp_request *request, void * data);
+
+typedef struct
+{
+    uint16_t port;
+    int socket;
+    char *address;
+
+    struct event_base *base;
+    struct evhttp * http;
+
+} Server_t;
 
 /*
  * Create the server structure
@@ -49,10 +61,11 @@ void server_dispose(Server_t *server);
 
 /*
  * Add a route to the server
- * 
+ *
  * @param server: The server object
  * @param path: The URL
- * @param callback: The 
+ * @param callback: The callback when the uri match
+ * @param data: The user data
  */
 void server_add_route(Server_t *server, const char *path, ServerCallback callback, void *data);
 
