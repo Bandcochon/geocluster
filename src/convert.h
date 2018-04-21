@@ -33,7 +33,9 @@
 #define __CONVERT_H__
 
 /*
- * Convert a GPS latitude position into a degree position
+ * Convert a GPS latitude position into a degree position.
+ *
+ * @param lat: The latitude to convert into degrees
  */
 double convert_lat_from_gps(double lat);
 

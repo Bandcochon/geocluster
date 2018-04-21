@@ -101,10 +101,13 @@ static json_t *_create_array(Cluster_t *root, Cluster_t ***cluster)
 
     for (register int i = 0; i < root->height; i++)
     {
+        json_t * rows = json_array();
         for (register int j = 0; j < root->width; j++)
         {
-            json_array_append(array, _create_object_from_point(cluster[i][j]));
+            json_array_append(rows, _create_object_from_point(cluster[i][j]));
         }
+
+        json_array_append(array, rows);
     }
 
     return array;
@@ -123,8 +126,8 @@ static json_t *_create_object_from_point(Cluster_t *cluster)
     integer = json_integer(cluster->points_array->length);
     if (cluster->points_array->length == 1)
     {
-        lat = json_real(cluster->points_array->points[0]->position.lat);
-        lng = json_real(cluster->points_array->points[0]->position.lng);
+        lat = json_real(convert_lat_to_gps(cluster->points_array->points[0]->position.lat));
+        lng = json_real(convert_lng_to_gps(cluster->points_array->points[0]->position.lng));
 
         if (cluster->points_array->points[0]->desc)
         {
@@ -137,6 +140,7 @@ static json_t *_create_object_from_point(Cluster_t *cluster)
     }
     else
     {
+        // Faire le barycentre
         lat = json_real(convert_lat_to_gps((cluster->south - cluster->north) / 2.0));
         lng = json_real(convert_lng_to_gps((cluster->east - cluster->west) / 2));
     }
