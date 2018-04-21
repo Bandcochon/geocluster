@@ -88,6 +88,23 @@ static void handle_section_server(Configuration_t *conf, const char *section, co
     }
 }
 
+static void handle_section_map(Configuration_t *conf, const char *section, const char *name, const char *value)
+{
+    if (strcmp(section, "map") != 0)
+    {
+        return;
+    }
+
+    if (!strcmp(name, "width"))
+    {
+        conf->width = atoi(value);
+    }
+    else if (!strcmp(name, "height"))
+    {
+        conf->height = atoi(value);
+    }
+}
+
 static void handle_section_database(Configuration_t *conf, const char *section, const char *name, const char *value)
 {
     if (strcmp(section, "database") != 0)
@@ -139,6 +156,7 @@ static int handler(void *config, const char *section, const char *name, const ch
 {
     Configuration_t *conf = (Configuration_t *) config;
 
+    handle_section_map(conf, section, name, value);
     handle_section_database(conf, section, name, value);
     handle_section_server(conf, section, name, value);
     handle_section_excluded(conf, section, name, value);

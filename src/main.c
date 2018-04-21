@@ -160,7 +160,6 @@ static void on_process_response(struct evhttp_request *req, void *data)
             return;
         }
         array = database_execute(config);
-
         json_result = process_clustering(array, config);
 
         buf = evbuffer_new();

@@ -3,3 +3,4 @@ build/
 markers.json
 .idea
 config.ini
+cmake-build-debug/
