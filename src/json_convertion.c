@@ -142,8 +142,8 @@ static json_t *_create_object_from_point(Cluster_t *cluster)
     else
     {
         // Faire le barycentre
-        lat = json_real(convert_lat_to_gps((cluster->south - cluster->north) / 2.0));
-        lng = json_real(convert_lng_to_gps((cluster->east - cluster->west) / 2));
+        lat = json_real(convert_lat_to_gps((cluster->south + cluster->north) / 2.0));
+        lng = json_real(convert_lng_to_gps((cluster->east + cluster->west) / 2.0));
     }
 
     json_object_set(obj, "count", integer);
