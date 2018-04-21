@@ -58,7 +58,7 @@ typedef struct {
 
 typedef struct
 {
-    int width, height;
+    uint8_t width, height;
     LatLng_t excluded;
     Bound_t bounds;
     ServerConfig_t server;
