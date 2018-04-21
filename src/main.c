@@ -168,8 +168,13 @@ static void on_process_response(struct evhttp_request *req, void *data)
             evhttp_send_reply(req, 400, "Bad Request: Missing parameters", NULL);
             return;
         }
+
+        clock_t begin = clock();
         array = database_execute(config);
         json_result = process_clustering(array, config);
+        clock_t end = clock();
+
+        log_info("Computation done in %.2f ms", ((float)(end - begin) / CLOCKS_PER_SEC) * 1000.f);
 
         buf = evbuffer_new();
         evbuffer_add_printf(buf, "%s", json_result);
@@ -185,7 +190,7 @@ int main(int argc, char **argv)
     Configuration_t *config = NULL;
     Server_t *server = NULL;
     FILE *log_file = NULL;
-    char * debug_mode = NULL;
+    char *debug_mode = NULL;
 
     args = argument_check(argc, argv);
     usage_if_needed(args);
