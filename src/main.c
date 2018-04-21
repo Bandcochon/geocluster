@@ -36,8 +36,8 @@
 #include "config.h"
 #include "server.h"
 #include "database.h"
+#include "log.h"
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <event2/buffer.h>
@@ -47,10 +47,12 @@
 
 /*
  * Display the program usage
+ *
+ * @param args: The argument structure.
  */
 static void usage_if_needed(Argument_t *args)
 {
-    if (args->help)
+    if (args && args->help)
     {
         fprintf(stderr, "Usage: geocluster [OPTIONS]\n");
         fprintf(stderr, "Options are:\n");
@@ -62,6 +64,11 @@ static void usage_if_needed(Argument_t *args)
     }
 }
 
+/*
+ * Do the clustering  with the database result.
+ *
+ * @param points_array:
+ */
 static char *process_clustering(PointArray_t *points_array, Configuration_t *config)
 {
     Cluster_t *cluster = NULL;
@@ -87,7 +94,7 @@ static void get_and_process_file_content(const char *filename, Configuration_t *
     content = file_load(filename);
     if (!content)
     {
-        fprintf(stderr, "The content doesn't exist\n");
+        log_critical("The content doesn't exist");
         return;
     }
 
@@ -110,7 +117,7 @@ static void on_process_response(struct evhttp_request *req, void *data)
     char *json_result = NULL;
     int result = 0;
 
-    fprintf(stdout, "Got something from %s\n", req->remote_host);
+    log_info("Got something from %s\n", req->remote_host);
 
     result = evhttp_parse_query_str(evhttp_uri_get_query(evhttp_request_get_evhttp_uri(req)), &params);
     if (result == -1)
@@ -146,7 +153,7 @@ static void on_process_response(struct evhttp_request *req, void *data)
             }
             else
             {
-                fprintf(stderr, "Unknown key %s, with this value %s\n", i->key, i->value);
+                log_error("Unknown key %s, with this value %s\n", i->key, i->value);
                 evhttp_send_reply(req, 400, "Bad Request", NULL);
                 return;
             }
@@ -155,7 +162,7 @@ static void on_process_response(struct evhttp_request *req, void *data)
 
         if (!(got_east && got_north && got_south && got_west))
         {
-            fprintf(stderr, "Error : Missing parameters\n");
+            log_error("Missing parameters");
             evhttp_send_reply(req, 400, "Bad Request: Missing parameters", NULL);
             return;
         }
@@ -175,23 +182,36 @@ int main(int argc, char **argv)
     Argument_t *args = NULL;
     Configuration_t *config = NULL;
     Server_t *server = NULL;
+    FILE *log_file = NULL;
+    char * debug_mode = NULL;
 
     args = argument_check(argc, argv);
     usage_if_needed(args);
 
     config = configuration_read(args->config_file);
 
+    debug_mode = getenv("DEBUG");
+    if (!debug_mode)
+    {
+        log_init(stderr, LOG_DEBUG);
+    }
+    else
+    {
+        log_file = fopen(config->logfile, "a+");
+        log_init(log_file, LOG_INFO);
+    }
+
     config->database.db = database_connect();
 
     if (args->filename)
     {
         // For testing purpose
-        fprintf(stdout, "Start as normal executable\n");
+        log_info("Start as normal executable, for testing purpose");
         get_and_process_file_content(args->filename, config);
     }
     else
     {
-        fprintf(stdout, "Start as micro service\n");
+        log_info("Start as micro service.");
 
         server = server_create(config->server.address, config->server.port);
         server_add_route(server, "/", (ServerCallback) on_process_response, config);
@@ -200,9 +220,17 @@ int main(int argc, char **argv)
         server_dispose(server);
     }
 
+    log_info("Shutting down");
     configuration_dispose(config);
     argument_dispose(args);
     mysql_close(config->database.db);
+
+    if (log_file != NULL)
+    {
+        fclose(log_file);
+    }
+
+    log_info("End");
 
     return 0;
 }

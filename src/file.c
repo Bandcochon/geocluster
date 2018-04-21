@@ -30,12 +30,12 @@
  */
 
 #include "point.h"
-#include "points_array.h"
+#include "log.h"
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
-#include <jansson.h>
+#include <errno.h>
+#include <memory.h>
 
 /*
  * Check if the file exists, exit with a message elsewhere
@@ -49,7 +49,7 @@ void file_ensure_exists(const char *filename)
 
     if (!exists)
     {
-        fprintf(stderr, "Error: The file '%s' doesn't exist\n", filename);
+        log_critical("Error: The file '%s' doesn't exist\n", filename);
         exit(1);
     }
 }
@@ -61,24 +61,36 @@ char *file_load(const char *filename)
 {
     FILE *file = NULL;
     char *content = NULL;
-    int length = 0;
+    long length = 0;
 
     file_ensure_exists(filename);
 
     file = fopen(filename, "r");
-    if (file)
+    if (!file)
     {
-        // Get file size
-        fseek(file, 0, SEEK_END);
-        length = ftell(file);
-
-        // Read file
-        fseek(file, 0, SEEK_SET);
-        content = (char *)malloc(sizeof(char *) * length);
-        fread(content, 1, length, file);
-
-        fclose(file);
+        log_critical("Can't load file: %s", filename);
+        exit(1);
     }
+    // Get file size
+    fseek(file, 0, SEEK_END);
+    length = ftell(file);
+    if (length == -1)
+    {
+        log_critical("Unable to get the file size because : %s", strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+
+    // Read file
+    fseek(file, 0, SEEK_SET);
+    content = (char *) malloc(sizeof(char *) * length);
+    if (!content)
+    {
+        log_critical("Unable to allocate memory because : %s", strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+
+    fread(content, 1, (size_t)length, file);
+    fclose(file);
 
     return content;
 }

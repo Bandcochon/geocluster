@@ -30,23 +30,22 @@
  */
 
 #include "server.h"
+#include "log.h"
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include <errno.h>
 #include <event2/event.h>
-#include <event2/http.h>
-#include <event2/util.h>
 
 Server_t *server_create(char *address, uint16_t port)
 {
     Server_t *server = NULL;
 
     server = (Server_t *) malloc(sizeof(Server_t));
-    if (!server) {
-        perror("Unable to allocate server object");
+    if (!server)
+    {
+        log_critical("Unable to allocate server object");
         exit(EXIT_FAILURE);
     }
 
@@ -60,14 +59,17 @@ Server_t *server_create(char *address, uint16_t port)
 
 void server_dispose(Server_t *server)
 {
-    if (server) {
+    if (server)
+    {
         event_base_free(server->base);
         evhttp_free(server->http);
 
-        if (server->address) {
+        if (server->address)
+        {
             free(server->address);
 
-            if (server->socket) {
+            if (server->socket)
+            {
                 close(server->socket);
             }
         }
@@ -94,11 +96,12 @@ void server_run(Server_t *server)
     const char *addr;
 
 
-    fprintf(stdout, "Try to acquire the socket at %s:%d\n", server->address, server->port);
+    log_info("Try to acquire the socket at %s:%d", server->address, server->port);
 
     handle = evhttp_bind_socket_with_handle(server->http, server->address, server->port);
-    if (!handle) {
-        printf("Unable to listen the port %d", server->port);
+    if (!handle)
+    {
+        log_critical("Unable to listen the port %d", server->port);
         exit(EXIT_FAILURE);
     }
 
@@ -107,29 +110,35 @@ void server_run(Server_t *server)
     fd = evhttp_bound_socket_get_fd(handle);
     memset(&addr_storage, 0, sizeof(addr_storage));
 
-    if (getsockname(fd, (struct sockaddr *) &addr_storage, &socklen)) {
-        perror("getsockname() failed");
+    if (getsockname(fd, (struct sockaddr *) &addr_storage, &socklen))
+    {
+        log_critical("getsockname() failed because: %s", strerror(errno));
         exit(EXIT_FAILURE);
     }
 
-    if (addr_storage.ss_family == AF_INET) {
+    if (addr_storage.ss_family == AF_INET)
+    {
+        log_debug("Using IPv4");
         got_port = ntohs(((struct sockaddr_in *) &addr_storage)->sin_port);
         inaddr = &((struct sockaddr_in *) &addr_storage)->sin_addr;
     }
 
-    else if (addr_storage.ss_family == AF_INET6) {
+    else if (addr_storage.ss_family == AF_INET6)
+    {
+        log_debug("Using IPv6");
         got_port = ntohs(((struct sockaddr_in6 *) &addr_storage)->sin6_port);
         inaddr = &((struct sockaddr_in6 *) &addr_storage)->sin6_addr;
     }
 
-    else {
-        fprintf(stderr, "Weird address family %d\n", addr_storage.ss_family);
+    else
+    {
+        log_critical("Weird address family %d\n", addr_storage.ss_family);
         exit(EXIT_FAILURE);
     }
 
     addr = evutil_inet_ntop(addr_storage.ss_family, inaddr, addrbuf, sizeof(addrbuf));
 
-    fprintf(stdout, "Listening on %s:%d\n", addr, got_port);
+    log_info("Listening on %s:%d", addr, got_port);
     evutil_snprintf(uri_root, sizeof(uri_root), "http://%s:%d", addr, got_port);
 
     event_base_dispatch(server->base);

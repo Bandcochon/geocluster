@@ -30,6 +30,7 @@
  */
 
 #include "points_array.h"
+#include "log.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -39,7 +40,7 @@ PointArray_t *points_array_create(unsigned int size)
     PointArray_t *arr = (PointArray_t *)malloc(sizeof(PointArray_t));
     if (!arr)
     {
-        fprintf(stderr, "Memory error while allocating array\n");
+        log_critical("Memory error while allocating array");
         exit(1);
     }
 

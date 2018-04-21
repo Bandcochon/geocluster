@@ -31,6 +31,7 @@
 
 #include "point.h"
 #include "convert.h"
+#include "log.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -42,7 +43,7 @@ Point_t *point_create(double lat, double lng, char disappeared, uint32_t pk, con
     Point_t *point = (Point_t *)malloc(sizeof(Point_t));
     if (!point)
     {
-        fprintf(stderr, "Erreur de mémoire dude\n");
+        log_critical("Memory error while allocating a point");
         exit(1);
     }
 

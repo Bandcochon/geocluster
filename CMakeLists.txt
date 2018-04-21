@@ -11,11 +11,14 @@ SET(SOURCES src/main.c
         src/config.h src/config.c
         src/server.h src/server.c
         src/database.h src/database.c
-        src/ini.h src/ini.c)
+        src/ini.h src/ini.c src/log.c src/log.h)
 
-SET(CMAKE_CXX_FLAGS "-O3 -finline-functions -ffast-math")
+#SET(CMAKE_CXX_FLAGS "-O3 -finline-functions -ffast-math")
 PROJECT(geocluster)
 ADD_EXECUTABLE(geocluster ${SOURCES})
+
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Wall")
 
 # Libraries
 FIND_PACKAGE(PkgConfig REQUIRED)

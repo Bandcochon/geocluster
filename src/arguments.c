@@ -31,6 +31,7 @@
 
 #include "arguments.h"
 #include "file.h"
+#include "log.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -46,7 +47,7 @@ Argument_t *argument_create(void)
     Argument_t *args = (Argument_t *)malloc(sizeof(Argument_t));
     if (!args)
     {
-        perror("An error occured while allocating memory for arguments");
+        log_critical("An error occured while allocating memory for arguments");
         exit(1);
     }
 
@@ -115,7 +116,7 @@ Argument_t *argument_check(int argc, char **argv)
             continue;
         }
 
-        fprintf(stderr, "Unknown arguments %s\n", argv[i]);
+        log_critical("Unknown arguments %s\n", argv[i]);
         exit(1);
     }
 
@@ -125,13 +126,13 @@ Argument_t *argument_check(int argc, char **argv)
         char  *config_file = NULL;
         char *current_dir = NULL;
 
-        fprintf(stderr, "Missing configuration file. Try get it from current directory.\n");
+        log_error("Missing configuration file. Try get it from current directory.");
 
         current_dir = (char *)malloc(sizeof(char *) * DIR_SIZE);
 
         if (!getcwd(current_dir, DIR_SIZE))
         {
-            perror("A probleme occured while getting the current directory");
+            log_critical("A probleme occured while getting the current directory");
             exit(EXIT_FAILURE);
         }
 

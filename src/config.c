@@ -50,6 +50,7 @@ static Configuration_t *configuration_create(void)
 
     config->height = 0;
     config->width = 0;
+    config->logfile = NULL;
 
     config->server.address = NULL;
     config->server.port = 0;
@@ -152,6 +153,19 @@ static void handle_section_excluded(Configuration_t *conf, const char *section, 
 
 }
 
+static void handle_section_geocluster(Configuration_t *conf, const char *section, const char *name, const char *value)
+{
+    if (strcmp(section, "geocluster") != 0)
+    {
+        return;
+    }
+
+    if (!strcmp(name, "logfile"))
+    {
+        conf->logfile = strdup(value);
+    }
+}
+
 static int handler(void *config, const char *section, const char *name, const char *value)
 {
     Configuration_t *conf = (Configuration_t *) config;
@@ -160,6 +174,7 @@ static int handler(void *config, const char *section, const char *name, const ch
     handle_section_database(conf, section, name, value);
     handle_section_server(conf, section, name, value);
     handle_section_excluded(conf, section, name, value);
+    handle_section_geocluster(conf, section, name, value);
 }
 
 Configuration_t *configuration_read(const char *config_path)

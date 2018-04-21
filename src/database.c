@@ -31,6 +31,7 @@
 
 
 #include "database.h"
+#include "log.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -44,9 +45,7 @@
  */
 static void show_mysql_error(MYSQL *mysql)
 {
-    printf("Error(%d) [%s] \"%s\"", mysql_errno(mysql),
-           mysql_sqlstate(mysql),
-           mysql_error(mysql));
+    log_critical("Error(%d) [%s] \"%s\"", mysql_errno(mysql), mysql_sqlstate(mysql), mysql_error(mysql));
     mysql_close(mysql);
     exit(-1);
 }
@@ -54,6 +53,8 @@ static void show_mysql_error(MYSQL *mysql)
 MYSQL *database_connect(void)
 {
     MYSQL *db = mysql_init(NULL);
+    log_info("Connect to the database");
+
     if (!mysql_real_connect(db, "172.17.0.1", "bandcochon", "bandcochon", "bandcochon", 0, NULL, 0))
     {
         show_mysql_error(db);
@@ -76,12 +77,14 @@ PointArray_t *database_execute(Configuration_t *config)
         );
     if (result)
     {
+        log_warning("No result set found");
         show_mysql_error(config->database.db);
     }
 
     db_result = mysql_store_result(config->database.db);
     if (!db_result)
     {
+        log_warning("Enable to store results");
         return NULL;
     }
 

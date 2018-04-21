@@ -63,6 +63,7 @@ typedef struct
     Bound_t bounds;
     ServerConfig_t server;
     DatabaseConfig_t database;
+    char * logfile;
 } Configuration_t;
 
 /*

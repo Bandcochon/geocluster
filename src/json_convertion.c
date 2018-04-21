@@ -32,6 +32,7 @@
 #include "json_convertion.h"
 #include "cluster.h"
 #include "convert.h"
+#include "log.h"
 
 #include <jansson.h>
 
@@ -52,7 +53,7 @@ PointArray_t *convert_from_string(char *content)
     root = json_loads(content, 0, &error);
     if (!root)
     {
-        fprintf(stderr, "Error: on line %d: %s\n", error.line, error.text);
+        log_critical("Error: on line %d: %s\n", error.line, error.text);
         exit(EXIT_FAILURE);
     }
 

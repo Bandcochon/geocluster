@@ -31,6 +31,7 @@
 
 #include "cluster.h"
 #include "convert.h"
+#include "log.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -48,7 +49,7 @@ Cluster_t *cluster_create(uint8_t width, uint8_t height, PointArray_t *points_ar
     cluster = (Cluster_t *)malloc(sizeof(Cluster_t));
     if (!cluster)
     {
-        fprintf(stderr, "Memory error while allocating cluster of points\n");
+        log_critical("Memory error while allocating cluster of points\n");
         exit(1);
     }
 
