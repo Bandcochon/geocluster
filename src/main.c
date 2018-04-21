@@ -117,12 +117,14 @@ static void on_process_response(struct evhttp_request *req, void *data)
     char *json_result = NULL;
     int result = 0;
 
-    log_info("Got something from %s\n", req->remote_host);
+    log_info("Got something from %s", req->remote_host);
 
     result = evhttp_parse_query_str(evhttp_uri_get_query(evhttp_request_get_evhttp_uri(req)), &params);
     if (result == -1)
     {
+        log_error("There's no parameters");
         evhttp_send_reply(req, 400, "Bad Request", NULL);
+        return;
     }
     else
     {
