@@ -34,28 +34,27 @@
 
 #include <stdint.h>
 
-typedef struct 
+typedef struct
 {
     uint8_t help;
-    char * filename;
-    char * config_file;
+    char *filename;
+    char *config_file;
 } Argument_t;
-
 
 /*
  * Create the argument structure and initialize the fields
  */
-Argument_t * argument_create(void);
+Argument_t *argument_create(void);
 
 /*
  * Properly dispose the argument_f structure
  */
-void argument_dispose(Argument_t * args);
+void argument_dispose(Argument_t *args);
 
 /*
  * Understand the command line
  */
-Argument_t * argument_check(int    argc, char **argv);
+Argument_t *argument_check(int argc, char **argv);
 
 #endif
 

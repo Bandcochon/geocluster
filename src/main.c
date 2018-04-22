@@ -88,6 +88,9 @@ static char *process_clustering(PointArray_t *points_array, Configuration_t *con
     return result;
 }
 
+/*
+ * Debug purpose only. Process the content
+ */
 static void get_and_process_file_content(const char *filename, Configuration_t *config)
 {
     char *content = NULL;
