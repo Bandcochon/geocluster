@@ -41,6 +41,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <time.h>
 #include <event2/buffer.h>
 #include <event2/keyvalq_struct.h>
 #include <evhttp.h>
