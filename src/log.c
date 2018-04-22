@@ -86,6 +86,7 @@ static void _log(MessageType type, const char *message, va_list args)
         now(date);
         vsprintf(buffer, message, args);
         fprintf(_logger.output, _logger.format, date, MessageStr[type], buffer);
+        fflush(_logger.output);
     }
 }
 

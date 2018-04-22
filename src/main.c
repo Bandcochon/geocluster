@@ -40,9 +40,11 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <event2/buffer.h>
 #include <event2/keyvalq_struct.h>
 #include <evhttp.h>
+
 
 
 /*
@@ -174,7 +176,7 @@ static void on_process_response(struct evhttp_request *req, void *data)
         json_result = process_clustering(array, config);
         clock_t end = clock();
 
-        log_info("Computation done in %.2f ms", ((float)(end - begin) / CLOCKS_PER_SEC) * 1000.f);
+        log_info("Computation done in %.2f ms", ((float) (end - begin) / CLOCKS_PER_SEC) * 1000.f);
 
         buf = evbuffer_new();
         evbuffer_add_printf(buf, "%s", json_result);
@@ -184,21 +186,28 @@ static void on_process_response(struct evhttp_request *req, void *data)
     }
 }
 
-int main(int argc, char **argv)
+static void start_web_server(Configuration_t *config)
 {
-    Argument_t *args = NULL;
-    Configuration_t *config = NULL;
     Server_t *server = NULL;
-    FILE *log_file = NULL;
+
+    log_info("Start as micro service.");
+
+    server = server_create(config->server.address, config->server.port);
+    server_add_route(server, "/", (ServerCallback) on_process_response, config);
+
+    server_run(server);
+    server_dispose(server);
+
+}
+
+static FILE *initialize_log(Configuration_t *config)
+{
     char *debug_mode = NULL;
-
-    args = argument_check(argc, argv);
-    usage_if_needed(args);
-
-    config = configuration_read(args->config_file);
+    FILE *log_file = NULL;
+    pid_t pid;
 
     debug_mode = getenv("DEBUG");
-    if (!debug_mode)
+    if (debug_mode && !strcmp(debug_mode, "1"))
     {
         log_init(stderr, LOG_DEBUG);
     }
@@ -208,6 +217,22 @@ int main(int argc, char **argv)
         log_init(log_file, LOG_INFO);
     }
 
+    pid = getpid();
+    log_info("Starting the app with PID=%d", pid);
+
+    return log_file;
+}
+int main(int argc, char **argv)
+{
+    Argument_t *args = NULL;
+    Configuration_t *config = NULL;
+    FILE *log_file = NULL;
+
+    args = argument_check(argc, argv);
+    usage_if_needed(args);
+
+    config = configuration_read(args->config_file);
+    log_file = initialize_log(config);
     config->database.db = database_connect();
 
     if (args->filename)
@@ -218,13 +243,7 @@ int main(int argc, char **argv)
     }
     else
     {
-        log_info("Start as micro service.");
-
-        server = server_create(config->server.address, config->server.port);
-        server_add_route(server, "/", (ServerCallback) on_process_response, config);
-
-        server_run(server);
-        server_dispose(server);
+        start_web_server(config);
     }
 
     log_info("Shutting down");
