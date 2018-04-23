@@ -36,6 +36,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <errno.h>
 #include <event2/event.h>
 
 Server_t *server_create(char *address, uint16_t port)

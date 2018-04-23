@@ -39,53 +39,10 @@
 static json_t *_create_array(Cluster_t *root, Cluster_t ***cluster);
 static json_t *_create_object_from_point(Cluster_t *point);
 
-/*
- * Parse the content and convert it into the struct we want.
- * If the content is not json complient, exit with error 1
- */
-PointArray_t *convert_from_string(char *content)
-{
-    json_t *root;
-    json_error_t error;
-    PointArray_t *points_array;
-    int register len = 0;
-
-    root = json_loads(content, 0, &error);
-    if (!root)
-    {
-        log_critical("Error: on line %d: %s\n", error.line, error.text);
-        exit(EXIT_FAILURE);
-    }
-
-    len = json_array_size(root);
-    points_array = points_array_create(len);
-    for (register int i = 0; i < len; i++)
-    {
-        json_t *data = json_array_get(root, i), *lat, *lng, *disappeared, *desc, *pk;
-        Point_t *point;
-
-        lat = json_object_get(data, "lat");
-        lng = json_object_get(data, "lng");
-        disappeared = json_object_get(data, "disappeared");
-        desc = json_object_get(data, "desc");
-        pk = json_object_get(data, "pk");
-
-        point = point_create(json_number_value(lat),
-                             json_number_value(lng),
-                             json_boolean_value(disappeared),
-                             json_number_value(pk),
-                             json_string_value(desc));
-
-        points_array_add_point(points_array, point);
-    }
-
-    json_decref(root);
-
-    return points_array;
-}
 
 char *convert_from_cluster(Cluster_t *cluster)
 {
+    char * result = NULL;
     json_t *root = json_object();
     json_t *exists_array = _create_array(cluster, cluster->groups_exists);
     json_t *disappeared_array = _create_array(cluster, cluster->groups_disappeared);
@@ -93,7 +50,11 @@ char *convert_from_cluster(Cluster_t *cluster)
     json_object_set(root, "uncleaned", exists_array);
     json_object_set(root, "cleaned", disappeared_array);
 
-    return json_dumps(root, 0);
+    result = json_dumps(root, 0);
+
+    json_decref(root);
+
+    return result;
 }
 
 static json_t *_create_array(Cluster_t *root, Cluster_t ***cluster)

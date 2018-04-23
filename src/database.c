@@ -33,8 +33,6 @@
 #include "database.h"
 #include "log.h"
 
-#include <stdio.h>
-#include <stdlib.h>
 #include <memory.h>
 
 
@@ -50,19 +48,24 @@ static void show_mysql_error(MYSQL *mysql)
     exit(-1);
 }
 
-MYSQL *database_connect(void)
+MYSQL *database_connect(Configuration_t *config)
 {
     MYSQL *db = mysql_init(NULL);
     log_info("Connect to the database");
 
-    if (!mysql_real_connect(db, "172.17.0.1", "bandcochon", "bandcochon", "bandcochon", 0, NULL, 0))
+    if (!mysql_real_connect(db,
+                            config->database.server.address,
+                            config->database.username,
+                            config->database.password,
+                            config->database.database,
+                            config->database.server.port, NULL, 0))
     {
         show_mysql_error(db);
     }
     return db;
 }
 
-PointArray_t *database_execute(Configuration_t *config)
+PointArray_t *database_execute(MYSQL * db)
 {
     MYSQL_RES *db_result = NULL;
     MYSQL_ROW row = NULL;
@@ -70,18 +73,17 @@ PointArray_t *database_execute(Configuration_t *config)
     my_ulonglong num_rows = 0;
     int result = 0;
 
-    result =
-        mysql_query(config->database.db,
-                    "SELECT id, latti AS lat, longi AS lng, disappeared, `desc` FROM bandcochon_picture "
-                    "WHERE trash=0" // and latti >= struc and latti <= struc and longi >= machin and longi <= bidule
-        );
+    result = mysql_query(db,
+                         "SELECT id, latti AS lat, longi AS lng, disappeared, `desc` "
+                         "FROM bandcochon_picture "
+                         "WHERE trash=0 AND (latti != -21.121154270682485 AND longi != 55.527327436676046)");
     if (result)
     {
         log_warning("No result set found");
-        show_mysql_error(config->database.db);
+        show_mysql_error(db);
     }
 
-    db_result = mysql_store_result(config->database.db);
+    db_result = mysql_store_result(db);
     if (!db_result)
     {
         log_warning("Enable to store results");
@@ -97,7 +99,7 @@ PointArray_t *database_execute(Configuration_t *config)
         double lat = atof(row[1]);
         double lng = atof(row[2]);
         char disa = (char) atoi(row[3]);
-        char *desc = strdup(row[4]);
+        char *desc = strlen(row[4]) > 0 ? strdup(row[4]) : NULL;
 
         Point_t *p = point_create(lat, lng, disa, pk, desc);
         points_array_add_point(points_array, p);

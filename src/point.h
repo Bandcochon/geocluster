@@ -41,14 +41,15 @@ typedef struct LatLng_t {
 } LatLng_t;
 
 
-typedef struct Point_t
+typedef struct Point_t Point_t;
+
+struct Point_t
 {
     LatLng_t position;
     uint32_t pk;
     char disappeared;
-    char allocated;
     char * desc;
-} Point_t;
+};
 
 
 /*

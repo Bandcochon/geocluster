@@ -34,6 +34,7 @@
 
 #include "point.h"
 
+#include <stdlib.h>
 #include <stdint.h>
 
 #define ARRAY_EMPTY 0
@@ -41,11 +42,11 @@
 typedef struct PointArray_t
 {
     Point_t **points;
-    uint32_t length;
+    size_t length;
     uint32_t position;
 } PointArray_t;
 
-PointArray_t *points_array_create(uint32_t size);
+PointArray_t *points_array_create(size_t size);
 PointArray_t * points_array_create_empty(void);
 void points_array_dispose(PointArray_t *arr);
 void points_array_add_point(PointArray_t *arr, Point_t *point);

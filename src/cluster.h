@@ -34,6 +34,7 @@
 
 #include "point.h"
 #include "points_array.h"
+#include "common.h"
 
 #include <stdint.h>
 

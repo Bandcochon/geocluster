@@ -32,10 +32,7 @@
 #include "points_array.h"
 #include "log.h"
 
-#include <stdlib.h>
-#include <stdio.h>
-
-PointArray_t *points_array_create(unsigned int size)
+PointArray_t *points_array_create(size_t size)
 {
     PointArray_t *arr = (PointArray_t *)malloc(sizeof(PointArray_t));
     if (!arr)
@@ -60,11 +57,14 @@ PointArray_t *points_array_create(unsigned int size)
 
 void points_array_dispose(PointArray_t *arr)
 {
+    log_debug("points_array_dispose");
     for (int i = 0; i < arr->length; i++)
     {
-        point_dispose(arr->points[i]);
+        if (arr->points && arr->points[i])
+        {
+            point_dispose(arr->points[i]);
+        }
     }
-
     free(arr->points);
     free(arr);
 }
@@ -79,6 +79,7 @@ void points_array_append_point(PointArray_t *arr, Point_t *point)
 {
     arr->length++;
     // Not the most efficient, but it works
+
     arr->points = realloc(arr->points, sizeof(Point_t *) * arr->length);
     arr->points[arr->position] = point;
     arr->position++;

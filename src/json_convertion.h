@@ -39,6 +39,4 @@
  */
 char * convert_from_cluster(Cluster_t * cluster);
 
-PointArray_t * convert_from_string(char * content);
-
 #endif

@@ -89,7 +89,7 @@ char *file_load(const char *filename)
         exit(EXIT_FAILURE);
     }
 
-    fread(content, 1, (size_t)length, file);
+    (void)fread(content, 1, (size_t)length, file);
     fclose(file);
 
     return content;

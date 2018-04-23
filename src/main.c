@@ -38,15 +38,17 @@
 #include "database.h"
 #include "log.h"
 
-#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <time.h>
 #include <event2/buffer.h>
 #include <event2/keyvalq_struct.h>
 #include <evhttp.h>
 
-
+typedef struct Application_t
+{
+    Configuration_t * config;
+    PointArray_t * points;
+} Application_t;
 
 /*
  * Display the program usage
@@ -72,41 +74,19 @@ static void usage_if_needed(Argument_t *args)
  *
  * @param points_array:
  */
-static char *process_clustering(PointArray_t *points_array, Configuration_t *config)
+static char *process_clustering(PointArray_t *points_array, Configuration_t *config, Bound_t bounds)
 {
     Cluster_t *cluster = NULL;
     char *result = NULL;
 
     cluster = cluster_create(config->width, config->height, points_array);
-
-    cluster_set_bounds(cluster, config->bounds.north, config->bounds.south, config->bounds.east, config->bounds.west);
+    cluster_set_bounds(cluster, bounds.north, bounds.south, bounds.east, bounds.west);
     cluster_compute(cluster, config->excluded.lat, config->excluded.lng);
-
-    result = convert_from_cluster(cluster);
-
+//    result = convert_from_cluster(cluster);
+    result = strdup("{\"cleaned\":[], \"uncleaned\":[]");
     cluster_dispose(cluster);
 
     return result;
-}
-
-/*
- * Debug purpose only. Process the content
- */
-static void get_and_process_file_content(const char *filename, Configuration_t *config)
-{
-    char *content = NULL;
-    PointArray_t *points_array = NULL;
-
-    content = file_load(filename);
-    if (!content)
-    {
-        log_critical("The content doesn't exist");
-        return;
-    }
-
-    points_array = convert_from_string(content);
-    process_clustering(points_array, config);
-    free(content);
 }
 
 /*
@@ -118,12 +98,20 @@ static void get_and_process_file_content(const char *filename, Configuration_t *
 static void on_process_response(struct evhttp_request *req, void *data)
 {
     struct evkeyvalq params;
+    Configuration_t * config;
+    Bound_t bounds;
+
     struct evbuffer *buf = NULL;
     PointArray_t *array = NULL;
     char *json_result = NULL;
     int result = 0;
 
     log_info("Got something from %s", req->remote_host);
+
+    array = ((Application_t *) data)->points;
+    config = ((Application_t *) data)->config;
+
+    memset(&bounds, 0, sizeof(Bound_t));
 
     result = evhttp_parse_query_str(evhttp_uri_get_query(evhttp_request_get_evhttp_uri(req)), &params);
     if (result == -1)
@@ -134,29 +122,33 @@ static void on_process_response(struct evhttp_request *req, void *data)
     }
     else
     {
-        Configuration_t *config = (Configuration_t *) data;
         int got_north = 0, got_west = 0, got_east = 0, got_south = 0;
 
+        log_debug("Got parameters");
         for (struct evkeyval *i = params.tqh_first; i; i = i->next.tqe_next)
         {
             if (!strcmp("north", i->key))
             {
-                config->bounds.north = atof(i->value);
+//                bounds.north = -20.800551419646325;
+                bounds.north = atof(i->value);
                 got_north = 1;
             }
             else if (!strcmp("south", i->key))
             {
-                config->bounds.south = atof(i->value);
+//                bounds.south = -21.441065626573486;
+                bounds.south = atof(i->value);
                 got_south = 1;
             }
             else if (!strcmp("east", i->key))
             {
-                config->bounds.east = atof(i->value);
+//                bounds.east = 56.351302046051046;
+                bounds.east = atof(i->value);
                 got_east = 1;
             }
             else if (!strcmp("west", i->key))
             {
-                config->bounds.west = atof(i->value);
+//                bounds.west = 54.703352827301046;
+                bounds.west = atof(i->value);
                 got_west = 1;
             }
             else
@@ -167,6 +159,9 @@ static void on_process_response(struct evhttp_request *req, void *data)
             }
         }
 
+        log_debug("Parameters are: north:%f south:%f east:%f west:%f",
+                  bounds.north, bounds.south, bounds.east, bounds.west);
+
 
         if (!(got_east && got_north && got_south && got_west))
         {
@@ -176,28 +171,37 @@ static void on_process_response(struct evhttp_request *req, void *data)
         }
 
         clock_t begin = clock();
-        array = database_execute(config);
-        json_result = process_clustering(array, config);
-        clock_t end = clock();
 
+        json_result =  process_clustering(array, config, bounds);
+        if (!json_result)
+        {
+            log_error("No results");
+            evhttp_send_reply(req, 200, "OK", NULL);
+            return;
+        }
+
+        clock_t end = clock();
         log_info("Computation done in %.2f ms", ((float) (end - begin) / CLOCKS_PER_SEC) * 1000.f);
 
         buf = evbuffer_new();
         evbuffer_add_printf(buf, "%s", json_result);
-        free(json_result);
         evhttp_add_header(evhttp_request_get_output_headers(req), "Content-Type", "application/json");
         evhttp_send_reply(req, 200, "OK", buf);
+
+        free(json_result);
+        evbuffer_free(buf);
     }
 }
 
-static void start_web_server(Configuration_t *config)
+static void start_web_server(Configuration_t * config, PointArray_t *points)
 {
     Server_t *server = NULL;
+    Application_t container = {config, points};
 
     log_info("Start as micro service.");
 
     server = server_create(config->server.address, config->server.port);
-    server_add_route(server, "/", (ServerCallback) on_process_response, config);
+    server_add_route(server, "/", (ServerCallback) on_process_response, &container);
 
     server_run(server);
     server_dispose(server);
@@ -226,35 +230,39 @@ static FILE *initialize_log(Configuration_t *config)
 
     return log_file;
 }
+
+PointArray_t * get_points_from_database(Configuration_t * config)
+{
+    MYSQL * db = NULL;
+    PointArray_t * points = NULL;
+
+    db = database_connect(config);
+    points = database_execute(db);
+    mysql_close(db);
+
+    return points;
+}
+
 int main(int argc, char **argv)
 {
+    Application_t app;
     Argument_t *args = NULL;
     Configuration_t *config = NULL;
     FILE *log_file = NULL;
+    PointArray_t * points;
 
     args = argument_check(argc, argv);
     usage_if_needed(args);
 
     config = configuration_read(args->config_file);
     log_file = initialize_log(config);
-    config->database.db = database_connect();
 
-    if (args->filename)
-    {
-        // For testing purpose
-        log_info("Start as normal executable, for testing purpose");
-        get_and_process_file_content(args->filename, config);
-    }
-    else
-    {
-        start_web_server(config);
-    }
+    points = get_points_from_database(config);
+    start_web_server(config, points);
 
     log_info("Shutting down");
     configuration_dispose(config);
     argument_dispose(args);
-    mysql_close(config->database.db);
-
     if (log_file != NULL)
     {
         fclose(log_file);

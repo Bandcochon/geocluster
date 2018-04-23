@@ -43,7 +43,7 @@
  *
  *  @return A MySQL/MariaDB connection
  */
-MYSQL *database_connect(void);
+MYSQL *database_connect(Configuration_t *config);
 
 /*
  * Execute the regular query.
@@ -51,6 +51,6 @@ MYSQL *database_connect(void);
  * @param config: The configuration structure
  * @return The array of Point_t or NULL
  */
-PointArray_t *database_execute(Configuration_t * config);
+PointArray_t *database_execute(MYSQL *db);
 
 #endif

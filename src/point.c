@@ -50,7 +50,6 @@ Point_t *point_create(double lat, double lng, char disappeared, uint32_t pk, con
     point->position.lat = convert_lat_from_gps(lat);
     point->position.lng = convert_lng_from_gps(lng);
     point->disappeared = disappeared;
-    point->allocated = 0;
     point->desc = desc ? strdup(desc) : NULL;
     point->pk = pk;
 
@@ -62,12 +61,10 @@ void point_dispose(Point_t *point)
 {
     if (point)
     {
-        if (point->desc) 
+        if (point->desc)
         {
             free(point->desc);
         }
-
         free(point);
-        point = NULL;
     }
 }

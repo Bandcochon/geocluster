@@ -51,6 +51,7 @@ static const char *MessageStr[] = {
 };
 
 #define MAX_DATE_SIZE 50
+#define MAX_BUFFER_SIZE 4096
 
 static struct Logger _logger;
 
@@ -81,7 +82,7 @@ static void _log(MessageType type, const char *message, va_list args)
 
     if (type >= _logger.level)
     {
-        char buffer[2048];
+        char buffer[MAX_BUFFER_SIZE];
         char date[MAX_DATE_SIZE];
         now(date);
         vsprintf(buffer, message, args);

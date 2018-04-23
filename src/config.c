@@ -32,6 +32,7 @@
 #include "config.h"
 #include "file.h"
 #include "ini.h"
+#include "common.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -175,6 +176,8 @@ static int handler(void *config, const char *section, const char *name, const ch
     handle_section_server(conf, section, name, value);
     handle_section_excluded(conf, section, name, value);
     handle_section_geocluster(conf, section, name, value);
+
+    return 0;
 }
 
 Configuration_t *configuration_read(const char *config_path)
@@ -193,8 +196,6 @@ Configuration_t *configuration_read(const char *config_path)
 
     return configuration;
 }
-
-#define DELETE(arg) if (arg) free(arg)
 
 void configuration_dispose(Configuration_t *config)
 {
