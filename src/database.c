@@ -74,9 +74,10 @@ PointArray_t *database_execute(MYSQL * db)
     int result = 0;
 
     result = mysql_query(db,
-                         "SELECT id, latti AS lat, longi AS lng, disappeared, `desc` "
-                         "FROM bandcochon_picture "
-                         "WHERE trash=0 AND (latti != -21.121154270682485 AND longi != 55.527327436676046)");
+                         "select id, latti AS lat, longi AS lng, disappeared, `desc` from bandcochon_picture where id not in "
+                         "(select id from  bandcochon_picture where latti <= -21.121154270682 and latti >= -21.121154270683 and longi >= 55.5273274366760 and longi <= 55.5273274366761)");
+
+
     if (result)
     {
         log_warning("No result set found");
