@@ -42,7 +42,7 @@ Cluster_t *cluster_create(uint8_t width, uint8_t height, PointArray_t *points_ar
 {
     Cluster_t *cluster = NULL;
 
-    cluster = (Cluster_t *) malloc(sizeof(Cluster_t)); // ALloc
+    cluster = (Cluster_t *) malloc(sizeof(Cluster_t));
     if (!cluster)
     {
         log_critical("Memory error while allocating cluster of points\n");
@@ -58,6 +58,8 @@ Cluster_t *cluster_create(uint8_t width, uint8_t height, PointArray_t *points_ar
     cluster->south = 0.;
     cluster->east = 0.;
     cluster->west = 0.;
+    cluster->lat = 0.;
+    cluster->lng = 0.;
 
     return cluster;
 }
@@ -95,17 +97,35 @@ void cluster_set_bounds(Cluster_t *cluster, double north, double south, double e
     cluster->west = convert_lng_from_gps(west);
 }
 
-void cluster_compute(Cluster_t *cluster, double excluded_lat, double excluded_lng)
+void cluster_compute(Cluster_t *cluster, double excluded_lat, double excluded_lng, int clusterize)
 {
+    log_info("Clusterize: %d", clusterize);
+    log_info("Width: %d, Height: %d", cluster->width, cluster->height);
+
     cluster->groups_disappeared = cluster_create_sub_clusters(cluster);
     cluster->groups_exists = cluster_create_sub_clusters(cluster);
 
     cluster_populate_groups(cluster, excluded_lat, excluded_lng);
 }
 
+void cluster_compute_barycenter(Cluster_t * cluster)
+{
+    double s_lat = 0., s_lng = 0.;
+    size_t i;
+
+    for(i=0; i < cluster->points_array->length; i++)
+    {
+        s_lat += cluster->points_array->points[i]->position.lat;
+        s_lng += cluster->points_array->points[i]->position.lng;
+    }
+
+    cluster->lat = s_lat / (double) cluster->points_array->length;
+    cluster->lng = s_lng / (double) cluster->points_array->length;
+}
+
 static Cluster_t ***cluster_create_sub_clusters(Cluster_t *cluster)
 {
-    Cluster_t ***group = malloc(sizeof(Cluster_t *) * cluster->height * cluster->width); // Alloc
+    Cluster_t ***group = malloc(sizeof(Cluster_t *) * cluster->height * cluster->width);
 
     double inc_lat = (cluster->south - cluster->north) / cluster->height;
     double inc_lng = (cluster->east - cluster->west) / cluster->width;
@@ -115,11 +135,11 @@ static Cluster_t ***cluster_create_sub_clusters(Cluster_t *cluster)
     for (register int i = 0; i < cluster->height; i++)
     {
         west = cluster->west;
-        group[i] = malloc(sizeof(Cluster_t *) * cluster->height); // Alloc
+        group[i] = malloc(sizeof(Cluster_t *) * cluster->height);
 
         for (register int j = 0; j < cluster->width; j++)
         {
-            Cluster_t *c = cluster_create(1, 1, points_array_create(ARRAY_EMPTY)); // Alloc Alloc
+            Cluster_t *c = cluster_create(1, 1, points_array_create(ARRAY_EMPTY));
             c->north = north;
             c->south = north + inc_lat;
             c->east = west + inc_lng;

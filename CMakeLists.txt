@@ -15,11 +15,11 @@ SET(SOURCES src/main.c
         src/database.h src/database.c
         src/ini.h src/ini.c src/log.c src/log.h src/common.h)
 
-#SET(CMAKE_CXX_FLAGS "-O3 -finline-functions -ffast-math -Wall")
-#SET(CMAKE_C_FLAGS "-O3 -finline-functions -ffast-math -Wall")
+SET(CMAKE_CXX_FLAGS "-O3 -finline-functions -ffast-math -Wall")
+SET(CMAKE_C_FLAGS "-O3 -finline-functions -ffast-math -Wall")
 
-SET(CMAKE_CXX_FLAGS "-g -Wall")
-SET(CMAKE_C_FLAGS "-g -Wall")
+#SET(CMAKE_CXX_FLAGS "-g -Wall")
+#SET(CMAKE_C_FLAGS "-g -Wall")
 
 ADD_EXECUTABLE(geocluster ${SOURCES})
 

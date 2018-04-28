@@ -36,24 +36,27 @@
 #include <stdint.h>
 #include <mysql/mysql.h>
 
-typedef struct {
+typedef struct
+{
     double north;
     double south;
     double east;
     double west;
 } Bound_t;
 
-typedef struct {
+typedef struct
+{
     uint16_t port;
-    char * address;
+    char *address;
 } ServerConfig_t;
 
-typedef struct {
+typedef struct
+{
     ServerConfig_t server;
-    char * username;
-    char * password;
-    char * database;
-    MYSQL * db;
+    char *username;
+    char *password;
+    char *database;
+    MYSQL *db;
 } DatabaseConfig_t;
 
 typedef struct
@@ -63,7 +66,7 @@ typedef struct
     Bound_t bounds;
     ServerConfig_t server;
     DatabaseConfig_t database;
-    char * logfile;
+    char *logfile;
 } Configuration_t;
 
 /*

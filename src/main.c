@@ -43,6 +43,10 @@
 #include <event2/buffer.h>
 #include <event2/keyvalq_struct.h>
 #include <evhttp.h>
+#include <time.h>
+
+
+static uint8_t MaxSize = 100;
 
 typedef struct Application_t
 {
@@ -74,16 +78,18 @@ static void usage_if_needed(Argument_t *args)
  *
  * @param points_array:
  */
-static char *process_clustering(PointArray_t *points_array, Configuration_t *config, Bound_t bounds)
+static char *process_clustering(PointArray_t *points_array, Configuration_t *config, Bound_t bounds, int clusterize)
 {
     Cluster_t *cluster = NULL;
     char *result = NULL;
 
-    cluster = cluster_create(config->width, config->height, points_array);
+    uint8_t width = clusterize == 0 ? MaxSize : config->width;
+    uint8_t height = clusterize == 0 ? MaxSize : config->width;
+
+    cluster = cluster_create(width, height, points_array);
     cluster_set_bounds(cluster, bounds.north, bounds.south, bounds.east, bounds.west);
-    cluster_compute(cluster, config->excluded.lat, config->excluded.lng);
-//    result = convert_from_cluster(cluster);
-    result = strdup("{\"cleaned\":[], \"uncleaned\":[]");
+    cluster_compute(cluster, config->excluded.lat, config->excluded.lng, clusterize);
+    result = convert_from_cluster(cluster);
     cluster_dispose(cluster);
 
     return result;
@@ -105,6 +111,7 @@ static void on_process_response(struct evhttp_request *req, void *data)
     PointArray_t *array = NULL;
     char *json_result = NULL;
     int result = 0;
+    int clusterize = 1;
 
     log_info("Got something from %s", req->remote_host);
 
@@ -124,32 +131,34 @@ static void on_process_response(struct evhttp_request *req, void *data)
     {
         int got_north = 0, got_west = 0, got_east = 0, got_south = 0;
 
-        log_debug("Got parameters");
+        log_debug("Got parameters: %s", req->uri);
         for (struct evkeyval *i = params.tqh_first; i; i = i->next.tqe_next)
         {
+            log_debug("Key: %s , Value: %s", i->key, i->value);
+
             if (!strcmp("north", i->key))
             {
-//                bounds.north = -20.800551419646325;
                 bounds.north = atof(i->value);
                 got_north = 1;
             }
             else if (!strcmp("south", i->key))
             {
-//                bounds.south = -21.441065626573486;
                 bounds.south = atof(i->value);
                 got_south = 1;
             }
             else if (!strcmp("east", i->key))
             {
-//                bounds.east = 56.351302046051046;
                 bounds.east = atof(i->value);
                 got_east = 1;
             }
             else if (!strcmp("west", i->key))
             {
-//                bounds.west = 54.703352827301046;
                 bounds.west = atof(i->value);
                 got_west = 1;
+            }
+            else if (!strcmp("cluster", i->key))
+            {
+                clusterize = !strcmp("false", i->value) ? 0 : 1;
             }
             else
             {
@@ -172,7 +181,7 @@ static void on_process_response(struct evhttp_request *req, void *data)
 
         clock_t begin = clock();
 
-        json_result =  process_clustering(array, config, bounds);
+        json_result =  process_clustering(array, config, bounds, clusterize);
         if (!json_result)
         {
             log_error("No results");
@@ -245,7 +254,7 @@ PointArray_t * get_points_from_database(Configuration_t * config)
 
 int main(int argc, char **argv)
 {
-    Application_t app;
+//    Application_t app;
     Argument_t *args = NULL;
     Configuration_t *config = NULL;
     FILE *log_file = NULL;

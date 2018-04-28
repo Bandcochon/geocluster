@@ -46,13 +46,13 @@ struct Cluster_t
 
     PointArray_t *points_array;
     uint8_t width, height;
-    double north, south, east, west;
-    double lat, lng;
+    double north, south, east, west, lat, lng;
 };
 
 Cluster_t *cluster_create(uint8_t width, uint8_t height, PointArray_t *points_array);
 void cluster_dispose(Cluster_t *cluster);
 void cluster_set_bounds(Cluster_t *cluster, double north, double south, double east, double west);
-void cluster_compute(Cluster_t *cluster, double excluded_lat, double excluded_lng);
+void cluster_compute(Cluster_t *cluster, double excluded_lat, double excluded_lng, int clusterize);
+void cluster_compute_barycenter(Cluster_t * cluster);
 
 #endif
