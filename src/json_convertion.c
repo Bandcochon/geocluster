@@ -47,11 +47,13 @@ char *convert_from_cluster(Cluster_t *cluster)
     json_t *exists_array = _create_array(cluster, cluster->groups_exists);
     json_t *disappeared_array = _create_array(cluster, cluster->groups_disappeared);
 
-    json_object_set(root, "uncleaned", exists_array);
-    json_object_set(root, "cleaned", disappeared_array);
+    json_object_set(root, "uncleaned", disappeared_array);
+    json_object_set(root, "cleaned", exists_array);
 
     result = json_dumps(root, 0);
 
+    json_decref(disappeared_array);
+    json_decref(exists_array);
     json_decref(root);
 
     return result;
@@ -66,10 +68,13 @@ static json_t *_create_array(Cluster_t *root, Cluster_t ***cluster)
         json_t * rows = json_array();
         for (register int j = 0; j < root->width; j++)
         {
-            json_array_append(rows, _create_object_from_point(cluster[i][j]));
+            json_t * point = _create_object_from_point(cluster[i][j]);
+            json_array_append(rows, point);
+            json_decref(point);
         }
 
         json_array_append(array, rows);
+        json_decref(rows);
     }
 
     return array;
@@ -77,7 +82,7 @@ static json_t *_create_array(Cluster_t *root, Cluster_t ***cluster)
 
 static json_t *_create_object_from_point(Cluster_t *cluster)
 {
-    json_t *obj, *integer, *lat, *lng, *desc, *pk;
+    json_t *obj, *count, *lat, *lng, *desc, *pk;
 
     if (!cluster->points_array->length)
     {
@@ -85,7 +90,7 @@ static json_t *_create_object_from_point(Cluster_t *cluster)
     }
 
     obj = json_object();
-    integer = json_integer(cluster->points_array->length);
+    count = json_integer(cluster->points_array->length);
     if (cluster->points_array->length == 1)
     {
         lat = json_real(convert_lat_to_gps(cluster->points_array->points[0]->position.lat));
@@ -95,9 +100,11 @@ static json_t *_create_object_from_point(Cluster_t *cluster)
         {
             desc = json_string(cluster->points_array->points[0]->desc);
             json_object_set(obj, "desc", desc);
+            json_decref(desc);
 
             pk = json_integer(cluster->points_array->points[0]->pk);
             json_object_set(obj, "pk", pk);
+            json_decref(pk);
         }
     }
     else
@@ -107,9 +114,13 @@ static json_t *_create_object_from_point(Cluster_t *cluster)
         lng = json_real(convert_lng_to_gps(cluster->lng));
     }
 
-    json_object_set(obj, "count", integer);
+    json_object_set(obj, "count", count);
     json_object_set(obj, "lat", lat);
     json_object_set(obj, "lng", lng);
+
+    json_decref(count);
+    json_decref(lat);
+    json_decref(lng);
 
     return obj;
 }
