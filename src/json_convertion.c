@@ -103,7 +103,7 @@ static json_t *_create_object_from_point(Cluster_t *cluster)
             json_decref(desc);
 
             pk = json_integer(cluster->points_array->points[0]->pk);
-            json_object_set(obj, "pk", pk);
+            json_object_set(obj, "id", pk);
             json_decref(pk);
         }
     }
