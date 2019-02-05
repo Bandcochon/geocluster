@@ -46,12 +46,12 @@ void file_ensure_exists(const char *filename)
     char exists = 0;
 
     exists = stat(filename, &buffer) == 0;
-
     if (!exists)
     {
         log_critical("Error: The file '%s' doesn't exist\n", filename);
         exit(1);
     }
+
 }
 
 /*

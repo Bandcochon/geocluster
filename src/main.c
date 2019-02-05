@@ -251,11 +251,13 @@ int main(int argc, char **argv)
     FILE *log_file = NULL;
     PointArray_t * points;
 
+    log_file = initialize_log(config);
+
     args = argument_check(argc, argv);
+    printf("Help: %d\nConfig file: %s\nfilename: %s", args->help, args->filename, args->config_file);
     usage_if_needed(args);
 
     config = configuration_read(args->config_file);
-    log_file = initialize_log(config);
 
     points = get_points_from_database(config);
     start_web_server(config, points);

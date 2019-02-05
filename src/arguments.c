@@ -122,7 +122,6 @@ Argument_t *argument_check(int argc, char **argv)
 
     if (!args->config_file)
     {
-
         char  *config_file = NULL;
         char *current_dir = NULL;
 
