@@ -223,16 +223,7 @@ static FILE *initialize_log(Configuration_t *config)
     FILE *log_file = NULL;
     pid_t pid;
 
-    debug_mode = getenv("DEBUG");
-    if (debug_mode && !strcmp(debug_mode, "1"))
-    {
-        log_init(stderr, LOG_DEBUG);
-    }
-    else
-    {
-        log_file = fopen(config->logfile, "a+");
-        log_init(log_file, LOG_INFO);
-    }
+    log_init(stderr, LOG_DEBUG);
 
     pid = getpid();
     log_info("Starting the app with PID=%d", pid);
