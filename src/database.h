@@ -35,7 +35,7 @@
 
 #include "points_array.h"
 #include "config.h"
-#include <mysql/mysql.h>
+#include <mysql.h>
 
 
 /*

@@ -37,15 +37,16 @@
 #include <jansson.h>
 
 static json_t *_create_array(Cluster_t *root, Cluster_t ***cluster);
+
 static json_t *_create_object_from_point(Cluster_t *point);
 
 
-char *convert_from_cluster(Cluster_t *cluster)
-{
-    char * result = NULL;
+char *convert_from_cluster(Cluster_t *cluster) {
+    char *result = NULL;
     json_t *root = json_object();
     json_t *exists_array = _create_array(cluster, cluster->groups_exists);
-    json_t *disappeared_array = _create_array(cluster, cluster->groups_disappeared);
+    json_t *disappeared_array = _create_array(cluster,
+                                              cluster->groups_disappeared);
 
     json_object_set(root, "uncleaned", disappeared_array);
     json_object_set(root, "cleaned", exists_array);
@@ -59,16 +60,13 @@ char *convert_from_cluster(Cluster_t *cluster)
     return result;
 }
 
-static json_t *_create_array(Cluster_t *root, Cluster_t ***cluster)
-{
+static json_t *_create_array(Cluster_t *root, Cluster_t ***cluster) {
     json_t *array = json_array();
 
-    for (register int i = 0; i < root->height; i++)
-    {
-        json_t * rows = json_array();
-        for (register int j = 0; j < root->width; j++)
-        {
-            json_t * point = _create_object_from_point(cluster[i][j]);
+    for (register int i = 0; i < root->height; i++) {
+        json_t *rows = json_array();
+        for (register int j = 0; j < root->width; j++) {
+            json_t *point = _create_object_from_point(cluster[i][j]);
             json_array_append(rows, point);
             json_decref(point);
         }
@@ -80,35 +78,29 @@ static json_t *_create_array(Cluster_t *root, Cluster_t ***cluster)
     return array;
 }
 
-static json_t *_create_object_from_point(Cluster_t *cluster)
-{
+static json_t *_create_object_from_point(Cluster_t *cluster) {
     json_t *obj, *count, *lat, *lng, *desc, *pk;
 
-    if (!cluster->points_array->length)
-    {
+    if (!cluster->points_array->length) {
         return json_null();
     }
 
     obj = json_object();
     count = json_integer(cluster->points_array->length);
-    if (cluster->points_array->length == 1)
-    {
-        lat = json_real(convert_lat_to_gps(cluster->points_array->points[0]->position.lat));
-        lng = json_real(convert_lng_to_gps(cluster->points_array->points[0]->position.lng));
+    if (cluster->points_array->length == 1) {
+        lat = json_real(convert_lat_to_gps(
+                cluster->points_array->points[0]->position.lat));
+        lng = json_real(convert_lng_to_gps(
+                cluster->points_array->points[0]->position.lng));
 
-        if (cluster->points_array->points[0]->desc)
-        {
-            desc = json_string(cluster->points_array->points[0]->desc);
-            json_object_set(obj, "desc", desc);
-            json_decref(desc);
+        desc = json_string(cluster->points_array->points[0]->desc);
+        json_object_set(obj, "desc", desc);
+        json_decref(desc);
 
-            pk = json_integer(cluster->points_array->points[0]->pk);
-            json_object_set(obj, "id", pk);
-            json_decref(pk);
-        }
-    }
-    else
-    {
+        pk = json_integer(cluster->points_array->points[0]->pk);
+        json_object_set(obj, "id", pk);
+        json_decref(pk);
+    } else {
         cluster_compute_barycenter(cluster);
         lat = json_real(convert_lat_to_gps(cluster->lat));
         lng = json_real(convert_lng_to_gps(cluster->lng));

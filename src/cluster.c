@@ -34,23 +34,22 @@
 #include "log.h"
 
 
-static Cluster_t ***cluster_create_sub_clusters(Cluster_t *cluster)
-{
-    Cluster_t ***group = malloc(sizeof(Cluster_t *) * cluster->height * cluster->width);
+static Cluster_t ***cluster_create_sub_clusters(Cluster_t *cluster) {
+    Cluster_t ***group = malloc(
+            sizeof(Cluster_t *) * cluster->height * cluster->width);
 
     double inc_lat = (cluster->south - cluster->north) / cluster->height;
     double inc_lng = (cluster->east - cluster->west) / cluster->width;
     double north = cluster->north;
     double west;
 
-    for (register int i = 0; i < cluster->height; i++)
-    {
+    for (register int i = 0; i < cluster->height; i++) {
         west = cluster->west;
         group[i] = malloc(sizeof(Cluster_t *) * cluster->height);
 
-        for (register int j = 0; j < cluster->width; j++)
-        {
-            Cluster_t *c = cluster_create(1, 1, points_array_create(ARRAY_EMPTY));
+        for (register int j = 0; j < cluster->width; j++) {
+            Cluster_t *c = cluster_create(1, 1,
+                                          points_array_create(ARRAY_EMPTY));
             c->north = north;
             c->south = north + inc_lat;
             c->east = west + inc_lng;
@@ -66,46 +65,42 @@ static Cluster_t ***cluster_create_sub_clusters(Cluster_t *cluster)
     return group;
 }
 
-static inline char cluster_contains(Cluster_t *cluster, Point_t *point)
-{
+static inline char cluster_contains(Cluster_t *cluster, Point_t *point) {
     return point->position.lat >= cluster->north &&
-        point->position.lat <= cluster->south &&
-        point->position.lng >= cluster->west &&
-        point->position.lng <= cluster->east;
+           point->position.lat <= cluster->south &&
+           point->position.lng >= cluster->west &&
+           point->position.lng <= cluster->east;
 }
 
-static void cluster_populate_groups(Cluster_t *cluster, double excluded_lat, double excluded_lng)
-{
+static void cluster_populate_groups(Cluster_t *cluster, double excluded_lat,
+                                    double excluded_lng) {
     register int length = (int) cluster->points_array->length;
 
-    for (register int i = 0; i < cluster->height; i++)
-    {
-        for (register int j = 0; j < cluster->width; j++)
-        {
-            for (register int p = 0; p < length; p++)
-            {
-                if (cluster->points_array->points[p]->position.lat == excluded_lat
-                    && cluster->points_array->points[p]->position.lng == excluded_lng)
-                {
+    for (register int i = 0; i < cluster->height; i++) {
+        for (register int j = 0; j < cluster->width; j++) {
+            for (register int p = 0; p < length; p++) {
+                if (cluster->points_array->points[p]->position.lat ==
+                    excluded_lat
+                    && cluster->points_array->points[p]->position.lng ==
+                       excluded_lng) {
                     continue;
                 }
 
-                if (cluster_contains(cluster, cluster->points_array->points[p]))
-                {
-                    if (cluster->points_array->points[p]->disappeared)
-                    {
-                        if (cluster_contains(cluster->groups_exists[i][j], cluster->points_array->points[p]))
-                        {
-                            points_array_append_point(cluster->groups_exists[i][j]->points_array,
-                                                      cluster->points_array->points[p]);
+                if (cluster_contains(cluster,
+                                     cluster->points_array->points[p])) {
+                    if (cluster->points_array->points[p]->disappeared) {
+                        if (cluster_contains(cluster->groups_exists[i][j],
+                                             cluster->points_array->points[p])) {
+                            points_array_append_point(
+                                    cluster->groups_exists[i][j]->points_array,
+                                    cluster->points_array->points[p]);
                         }
-                    }
-                    else
-                    {
-                        if (cluster_contains(cluster->groups_disappeared[i][j], cluster->points_array->points[p]))
-                        {
-                            points_array_append_point(cluster->groups_disappeared[i][j]->points_array,
-                                                      cluster->points_array->points[p]);
+                    } else {
+                        if (cluster_contains(cluster->groups_disappeared[i][j],
+                                             cluster->points_array->points[p])) {
+                            points_array_append_point(
+                                    cluster->groups_disappeared[i][j]->points_array,
+                                    cluster->points_array->points[p]);
                         }
                     }
                 }
@@ -114,13 +109,12 @@ static void cluster_populate_groups(Cluster_t *cluster, double excluded_lat, dou
     }
 }
 
-Cluster_t *cluster_create(uint8_t width, uint8_t height, PointArray_t *points_array)
-{
+Cluster_t *
+cluster_create(uint8_t width, uint8_t height, PointArray_t *points_array) {
     Cluster_t *cluster = NULL;
 
     cluster = (Cluster_t *) malloc(sizeof(Cluster_t));
-    if (!cluster)
-    {
+    if (!cluster) {
         log_critical("Memory error while allocating cluster of points\n");
         exit(1);
     }
@@ -140,12 +134,9 @@ Cluster_t *cluster_create(uint8_t width, uint8_t height, PointArray_t *points_ar
     return cluster;
 }
 
-void cluster_dispose(Cluster_t *cluster)
-{
-    for (register int i = 0; i < cluster->height; i++)
-    {
-        for (register int j = 0; j < cluster->width; j++)
-        {
+void cluster_dispose(Cluster_t *cluster) {
+    for (register int i = 0; i < cluster->height; i++) {
+        for (register int j = 0; j < cluster->width; j++) {
             DELETE(cluster->groups_disappeared[i][j]->points_array->points);
             DELETE(cluster->groups_disappeared[i][j]->points_array);
             DELETE(cluster->groups_disappeared[i][j]);
@@ -165,16 +156,18 @@ void cluster_dispose(Cluster_t *cluster)
     DELETE(cluster);
 }
 
-void cluster_set_bounds(Cluster_t *cluster, double north, double south, double east, double west)
-{
+void
+cluster_set_bounds(Cluster_t *cluster, double north, double south, double east,
+                   double west) {
     cluster->north = convert_lat_from_gps(north);
     cluster->south = convert_lat_from_gps(south);
     cluster->east = convert_lng_from_gps(east);
     cluster->west = convert_lng_from_gps(west);
 }
 
-void cluster_compute(Cluster_t *cluster, double excluded_lat, double excluded_lng, int clusterize)
-{
+void
+cluster_compute(Cluster_t *cluster, double excluded_lat, double excluded_lng,
+                int clusterize) {
     log_info("Clusterize: %d", clusterize);
     log_info("Width: %d, Height: %d", cluster->width, cluster->height);
 
@@ -184,13 +177,11 @@ void cluster_compute(Cluster_t *cluster, double excluded_lat, double excluded_ln
     cluster_populate_groups(cluster, excluded_lat, excluded_lng);
 }
 
-void cluster_compute_barycenter(Cluster_t *cluster)
-{
+void cluster_compute_barycenter(Cluster_t *cluster) {
     double s_lat = 0., s_lng = 0.;
     size_t i;
 
-    for (i = 0; i < cluster->points_array->length; i++)
-    {
+    for (i = 0; i < cluster->points_array->length; i++) {
         s_lat += cluster->points_array->points[i]->position.lat;
         s_lng += cluster->points_array->points[i]->position.lng;
     }

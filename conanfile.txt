@@ -1,0 +1,11 @@
+[requires]
+openssl/1.1.1g
+jansson/2.12
+libevent/2.1.11
+libmysqlclient/8.0.17
+
+[generators]
+cmake
+
+[options]
+OpenSSL:shared=True

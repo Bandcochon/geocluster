@@ -34,7 +34,7 @@
 
 #include "point.h"
 #include <stdint.h>
-#include <mysql/mysql.h>
+#include <mysql.h>
 
 typedef struct
 {

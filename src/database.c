@@ -80,16 +80,19 @@ PointArray_t *database_execute(MYSQL * db)
                             "longi AS lng, "
                             "disappeared, "
                             "`desc` "
-                        "FROM bandcochon_picture WHERE id NOT IN "
-                        "(SELECT "
-                            "id "
-                        "FROM  "
-                            "bandcochon_picture "
+                        "FROM bandcochon_picture "
                         "WHERE "
-                            "latti <= -21.121154270682 AND "
-                            "latti >= -21.121154270683 AND "
-                            "longi >= 55.5273274366760 AND "
-                            "longi <= 55.5273274366761)");
+                            "id NOT IN "
+                                "(SELECT "
+                                    "id "
+                                "FROM  "
+                                    "bandcochon_picture "
+                                "WHERE "
+                                    "latti <= -21.121154270682 AND "
+                                    "latti >= -21.121154270683 AND "
+                                    "longi >= 55.5273274366760 AND "
+                                    "longi <= 55.5273274366761) "
+                            "AND trash=0");
 
     if (result)
     {
