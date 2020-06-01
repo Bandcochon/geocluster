@@ -20,8 +20,9 @@ set(SOURCES src/main.c
         src/config.h src/config.c
         src/server.h src/server.c
         src/database.h src/database.c
-        src/ini.h src/ini.c src/log.c src/log.h src/common.h)
+        src/ini.h src/ini.c
+        src/log.c src/log.h
+        src/common.h)
 
 add_executable(geocluster ${SOURCES})
-
 conan_target_link_libraries(geocluster)

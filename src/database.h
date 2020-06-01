@@ -37,7 +37,6 @@
 #include "config.h"
 #include <mysql.h>
 
-
 /*
  *  Create a connection with MySQL.
  *
