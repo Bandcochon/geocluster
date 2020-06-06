@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+
+cat << EOF
+   _____                 _           _
+  / ____|               | |         | |
+ | |  __  ___  ___   ___| |_   _ ___| |_ ___ _ __
+ | | |_ |/ _ \/ _ \ / __| | | | / __| __/ _ \ '__|
+ | |__| |  __/ (_) | (__| | |_| \__ \ ||  __/ |
+  \_____|\___|\___/ \___|_|\__,_|___/\__\___|_|
+
+EOF
+
+name=registry.bandcochon.fr/bandcochon/geocluster
+app_name=${name}:$(jq -r .version version.json)
+previous=${name}:$(jq -r .previous version.json)
+
+function build_image {
+    docker build -t ${app_name} .
+}
+
+function push_image {
+    docker push ${app_name}
+}
+
+function start_image {
+  if [ -z ${DB_HOST} ]
+  then
+    echo "Error Missing Database host"
+    exit 1
+  fi
+
+  if [ -z ${DB_USERNAME} ]
+  then
+    echo "Error Missing Database username"
+    exit 1
+  fi
+
+  if [ -z ${DB_DATABASE} ]
+  then
+    echo "Error Missing Database name"
+    exit 1
+  fi
+
+  if [ -z ${DB_PASSWORD} ]
+  then
+    echo "Error Missing Database password"
+    exit 1
+  fi
+
+  if [ -z ${DB_PORT} ]
+  then
+    echo "Error Missing Database port"
+    exit 1
+  fi
+
+   ssh bandcochon.re  "docker pull ${app_name} &&
+    (docker container stop ${previous} || true) &&
+    docker run \\
+      --restart=always \\
+      -d  \\
+      -p 127.0.0.1:5000:5000 \\
+      --name geocluster-$(jq -r .version version.json) \\
+      -e DB_HOST=${DB_HOST} \\
+      -e DB_USERNAME=${DB_USERNAME} \\
+      -e DB_DATABASE=${DB_DATABASE} \\
+      -e DB_PASSWORD=${DB_PASSWORD} \\
+      -e DB_PORT=${DB_PORT} \\
+      ${app_name}"
+}
+
+function usage {
+    cat << EOF
+Aide à mettre en place le micro service
+EOF
+}
+
+case $1 in
+  build)
+    build_image
+  ;;
+
+  push)
+    push_image
+  ;;
+
+  start)
+    start_image
+  ;;
+
+  deploy)
+    build_image
+    push_image
+    start_image
+    ;;
+
+  *|help)
+    usage
+    ;;
+esac
+
+

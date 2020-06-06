@@ -3,3 +3,5 @@ build/
 markers.json
 .idea
 cmake-build-debug/
+.env
+.gitlab-ci.yml
