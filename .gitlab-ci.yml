@@ -7,7 +7,7 @@ stages:
 
 build_docker:
   before_script:
-    - VERSION=$(jq -r .version version.json)
+    - VERSION=$(cat version.txt)
     - ENVIRONMENT="$ENVIRONMENT" BC_GEOCLUSTER_VERSION="$VERSION"
   stage: build
   image: docker:latest

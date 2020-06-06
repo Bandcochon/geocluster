@@ -13,7 +13,7 @@ EOF
 app_name=registry.bandcochon.fr/bandcochon/geocluster
 
 docker build \
-    -t ${app_name}:`jq -r .version version.json` \
+    -t ${app_name}:`cat version.txt` \
     -t ${app_name}:latest \
     .
 
