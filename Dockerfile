@@ -1,10 +1,11 @@
-FROM conanio/gcc9 as builder
+FROM conanio/gcc8 as builder
 
 USER conan
 
 COPY src src
 COPY CMakeLists.txt .
 COPY conanfile.txt .
+COPY config.ini .
 
 RUN conan install .
 RUN cmake .

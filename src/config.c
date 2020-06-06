@@ -33,10 +33,11 @@
 #include "file.h"
 #include "ini.h"
 #include "common.h"
+#include "log.h"
 
 #include <stdlib.h>
 #include <string.h>
-
+#include <unistd.h>
 
 static Configuration_t *configuration_create(void)
 {
@@ -193,6 +194,12 @@ Configuration_t *configuration_read(const char *config_path)
     file_ensure_exists(config_path);
     configuration = configuration_create();
     ini_parse(config_path, handler, configuration);
+
+    configuration->database.username = getenv("DB_USERNAME");
+    configuration->database.password = getenv("DB_PASSWORD");
+    configuration->database.server.address = getenv("DB_HOST");
+    configuration->database.database = getenv("DB_DATABASE");
+    configuration->database.server.port = atoi( getenv("DB_PORT"));
 
     return configuration;
 }
