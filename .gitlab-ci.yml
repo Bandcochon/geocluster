@@ -1,30 +1,30 @@
-variables:
-  BC_GEOCLUSTER_IMAGE_NAME: $BC_REGISTRY_HOST/bandcochon/geocluster
-
-stages:
-  - build
-  - push
-
-build_docker:
-  before_script:
-    - VERSION=$(cat version.txt)
-    - ENVIRONMENT="$ENVIRONMENT" BC_GEOCLUSTER_VERSION="$VERSION"
-  stage: build
-  image: docker:latest
-  script:
-    - docker build -t $BC_GEOCLUSTER_IMAGE_NAME:$BC_GEOCLUSTER_VERSION .
-  only:
-    - master
-  tags:
-    - docker
-
-push_image:
-  stage: push
-  image:  docker:latest
-  script:
-    - docker login -u $BC_REGISTRY_USER -p $BC_REGISTRY_PASSWORD $BC_REGISTRY_HOST
-    - docker push $BC_GEOCLUSTER_IMAGE_NAME:$BC_GEOCLUSTER_VERSION
-  only:
-    - master
-  tags:
-    - docker
+#variables:
+#  BC_GEOCLUSTER_IMAGE_NAME: $BC_REGISTRY_HOST/bandcochon/geocluster
+#
+#stages:
+#  - build
+#  - push
+#
+#build_docker:
+#  before_script:
+#    - VERSION=$(cat version.txt)
+#    - ENVIRONMENT="$ENVIRONMENT" BC_GEOCLUSTER_VERSION="$VERSION"
+#  stage: build
+#  image: docker:latest
+#  script:
+#    - docker build -t $BC_GEOCLUSTER_IMAGE_NAME:$BC_GEOCLUSTER_VERSION .
+#  only:
+#    - master
+#  tags:
+#    - docker
+#
+#push_image:
+#  stage: push
+#  image:  docker:latest
+#  script:
+#    - docker login -u $BC_REGISTRY_USER -p $BC_REGISTRY_PASSWORD $BC_REGISTRY_HOST
+#    - docker push $BC_GEOCLUSTER_IMAGE_NAME:$BC_GEOCLUSTER_VERSION
+#  only:
+#    - master
+#  tags:
+#    - docker
