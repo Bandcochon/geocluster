@@ -32,12 +32,11 @@
 #include "arguments.h"
 #include "file.h"
 #include "log.h"
+#include "common.h"
 
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 #include <unistd.h>
-#include <errno.h>
 
 const char *DefaultConfigFile = "./config.ini";
 const int DIR_SIZE = 1024;
@@ -47,7 +46,7 @@ Argument_t *argument_create(void)
     Argument_t *args = (Argument_t *)malloc(sizeof(Argument_t));
     if (!args)
     {
-        log_critical("An error occured while allocating memory for arguments");
+        log_critical("An error occurred while allocating memory for arguments");
         exit(1);
     }
 
@@ -60,18 +59,9 @@ Argument_t *argument_create(void)
 
 void argument_dispose(Argument_t *args)
 {
-    if (args)
-    {
-        if (args->filename)
-        {
-            free(args->filename);
-        }
-        if (args->config_file)
-        {
-            free(args->config_file);
-        }
-        free(args);
-    }
+    DELETE(args->filename);
+    DELETE(args->config_file);
+    DELETE(args);
 }
 
 Argument_t *argument_check(int argc, char **argv)
@@ -131,15 +121,15 @@ Argument_t *argument_check(int argc, char **argv)
 
         if (!getcwd(current_dir, DIR_SIZE))
         {
-            log_critical("A probleme occured while getting the current directory");
+            log_critical("A problem occurred while getting the current directory");
             exit(EXIT_FAILURE);
         }
 
         config_file = strcat(current_dir, DefaultConfigFile);
         file_ensure_exists(config_file);
         args->config_file = strdup(config_file);
-        
-        free(current_dir);
+
+        DELETE(current_dir);
     }
 
     return args;
