@@ -33,6 +33,8 @@
 
 #include <time.h>
 #include <stdarg.h>
+#include <stdlib.h>
+#include <string.h>
 
 struct Logger
 {
@@ -93,11 +95,13 @@ static void _log(MessageType type, const char *message, va_list args)
 
 void log_debug(const char *message, ...)
 {
-    va_list args;
-    va_start(args, message);
-    _log(LOG_DEBUG, message, args);
-    va_end(args);
-
+    const char * debug = getenv("DEBUG");
+    if (debug && !strcmp(debug, "1")) {
+        va_list args;
+        va_start(args, message);
+        _log(LOG_DEBUG, message, args);
+        va_end(args);
+    }
 }
 
 void log_info(const char *message, ...)
@@ -106,7 +110,6 @@ void log_info(const char *message, ...)
     va_start(args, message);
     _log(LOG_INFO, message, args);
     va_end(args);
-
 }
 
 void log_warning(const char *message, ...)
@@ -115,7 +118,6 @@ void log_warning(const char *message, ...)
     va_start(args, message);
     _log(LOG_WARNING, message, args);
     va_end(args);
-
 }
 
 void log_error(const char *message, ...)
@@ -124,7 +126,6 @@ void log_error(const char *message, ...)
     va_start(args, message);
     _log(LOG_ERROR, message, args);
     va_end(args);
-
 }
 
 void log_critical(const char *message, ...)
@@ -133,6 +134,5 @@ void log_critical(const char *message, ...)
     va_start(args, message);
     _log(LOG_CRITICAL, message, args);
     va_end(args);
-
 }
 
